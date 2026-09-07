@@ -541,23 +541,20 @@ const commands = [
     }
   },
   {
-    data: new SlashCommandBuilder().setName('msg').setDescription('Send an embed message to a channel')
-      .addChannelOption(o => o.setName('channel').setDescription('Target channel').addChannelTypes(ChannelType.GuildText).setRequired(true))
+    data: new SlashCommandBuilder().setName('msg').setDescription('Send an embed message in this channel')
       .addStringOption(o => o.setName('title').setDescription('Embed title').setRequired(true))
       .addStringOption(o => o.setName('message').setDescription('Embed description').setRequired(true))
       .addStringOption(o => o.setName('color').setDescription('Embed color (hex)').setRequired(false))
       .addStringOption(o => o.setName('footer').setDescription('Embed footer').setRequired(false))
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     async execute(interaction) {
-      const channel = interaction.options.getChannel('channel');
       const title = interaction.options.getString('title');
       const message = interaction.options.getString('message');
       const color = interaction.options.getString('color') || '#00ff88';
       const footer = interaction.options.getString('footer');
       const embed = new EmbedBuilder().setColor(color).setTitle(title).setDescription(message).setTimestamp();
       if (footer) embed.setFooter({ text: footer });
-      await channel.send({ embeds: [embed] });
-      await interaction.reply({ content: `Embed sent to ${channel}!`, ephemeral: true });
+      await interaction.reply({ embeds: [embed] });
     }
   },
   {
