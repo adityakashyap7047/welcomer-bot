@@ -541,6 +541,27 @@ const commands = [
     }
   },
   {
+    data: new SlashCommandBuilder().setName('msg').setDescription('Send a message to a channel')
+      .addChannelOption(o => o.setName('channel').setDescription('Target channel').addChannelTypes(ChannelType.GuildText).setRequired(true))
+      .addStringOption(o => o.setName('message').setDescription('Message to send').setRequired(true))
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    async execute(interaction) {
+      const channel = interaction.options.getChannel('channel');
+      const message = interaction.options.getString('message');
+      await channel.send({ content: message });
+      await interaction.reply({ content: `Message sent to ${channel}!`, ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('say').setDescription('Make the bot say something')
+      .addStringOption(o => o.setName('message').setDescription('Message to say').setRequired(true))
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    async execute(interaction) {
+      const message = interaction.options.getString('message');
+      await interaction.reply({ content: message });
+    }
+  },
+  {
     data: new SlashCommandBuilder().setName('help').setDescription('List all commands'),
     async execute(interaction) {
       await interaction.reply({ embeds: [new EmbedBuilder().setColor('#00ff88').setTitle('Nexus Welcomer — Commands')
@@ -549,7 +570,7 @@ const commands = [
           { name: 'Control', value: '`/disable-welcome` `/disable-goodbye` `/disable-autorole` `/pause-welcome` `/resume-welcome` `/set-prefix`', inline: false },
           { name: 'Test', value: '`/test-welcome` `/welcome-preview`', inline: false },
           { name: 'Info', value: '`/serverinfo` `/userinfo` `/botinfo` `/stats` `/welcome-logs` `/top-commands`', inline: false },
-          { name: 'Management', value: '`/clean-welcomes` `/broadcast` `/migrate-server` `/join-all` `/mass-dm` `/widget`', inline: false },
+          { name: 'Management', value: '`/clean-welcomes` `/broadcast` `/migrate-server` `/join-all` `/mass-dm` `/widget` `/msg` `/say`', inline: false },
           { name: 'Fun', value: '`/8ball` `/coinflip` `/dice` `/rps` `/joke` `/poll` `/remind` `/random` `/calc` `/giveaway`', inline: false },
           { name: 'Moderation', value: '`/kick` `/ban` `/unban` `/timeout` `/untimeout` `/purge` `/slowmode` `/lock` `/unlock`', inline: false },
           { name: 'Roles', value: '`/nick` `/role-add` `/role-remove` `/avatar` `/banner`', inline: false },
