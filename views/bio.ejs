@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bio - WelcomeBot</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👋</text></svg>">
+</head>
+<body>
+  <div class="bg-animation"></div>
+  <div class="grid-overlay"></div>
+  <div class="particles"></div>
+
+  <nav class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="logo">👋</div>
+      WelcomeBot
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/commands" class="nav-link">Commands</a>
+      <a href="/status" class="nav-link">Status</a>
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+    </div>
+    <div class="nav-auth">
+      <% if (user) { %>
+        <a href="/dashboard" class="btn-discord btn-discord-outline">Dashboard</a>
+        <a href="/auth/logout" class="btn-discord">Logout</a>
+        <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=64" class="user-avatar" alt="Avatar">
+      <% } else { %>
+        <a href="/auth/login" class="btn-discord">Login with Discord</a>
+      <% } %>
+    </div>
+  </nav>
+
+  <div class="container">
+    <section class="hero">
+      <h1 class="hero-title">
+        About<br>
+        <span class="gradient">WelcomeBot</span>
+      </h1>
+      <p class="hero-subtitle">
+        A powerful Discord welcomer bot with a stunning 3D animated dashboard.
+      </p>
+    </section>
+
+    <div class="card-grid">
+      <div class="card" data-animate>
+        <div class="card-icon">👋</div>
+        <h3 class="card-title">Welcome System</h3>
+        <p class="card-desc">Automatically greet new members with beautiful embed messages and custom images.</p>
+      </div>
+      <div class="card" data-animate>
+        <div class="card-icon">🎭</div>
+        <h3 class="card-title">Auto Roles</h3>
+        <p class="card-desc">Assign roles to new members automatically. Set it once and forget it.</p>
+      </div>
+      <div class="card" data-animate>
+        <div class="card-icon">📊</div>
+        <h3 class="card-title">Live Dashboard</h3>
+        <p class="card-desc">Configure everything through a beautiful 3D animated web dashboard.</p>
+      </div>
+      <div class="card" data-animate>
+        <div class="card-icon">🛡️</div>
+        <h3 class="card-title">Moderation</h3>
+        <p class="card-desc">Kick, ban, timeout, warn, and more. Full moderation toolkit.</p>
+      </div>
+      <div class="card" data-animate>
+        <div class="card-icon">🎮</div>
+        <h3 class="card-title">Fun Commands</h3>
+        <p class="card-desc">8ball, coinflip, dice, RPS, jokes, polls, giveaways and more.</p>
+      </div>
+      <div class="card" data-animate>
+        <div class="card-icon">📈</div>
+        <h3 class="card-title">Leveling System</h3>
+        <p class="card-desc">Earn XP by chatting and level up. See the leaderboard.</p>
+      </div>
+    </div>
+
+    <div class="stats-bar" style="margin-top: 60px;">
+      <div class="stat-card" data-animate>
+        <div class="stat-number" data-stat="guilds">...</div>
+        <div class="stat-label">Servers</div>
+      </div>
+      <div class="stat-card" data-animate>
+        <div class="stat-number" data-stat="users">...</div>
+        <div class="stat-label">Users</div>
+      </div>
+      <div class="stat-card" data-animate>
+        <div class="stat-number" data-stat-uptime>...</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+      <div class="stat-card" data-animate>
+        <div class="stat-number" data-stat-ping>...</div>
+        <div class="stat-label">Latency</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>WelcomeBot &copy; 2026 | Built with love for the Discord community</p>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

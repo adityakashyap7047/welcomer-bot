@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= guild.name %> - WelcomeBot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-animation"></div>
+  <div class="grid-overlay"></div>
+  <div class="particles"></div>
+
+  <nav class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="logo">👋</div>
+      WelcomeBot
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/commands" class="nav-link">Commands</a>
+      <a href="/status" class="nav-link">Status</a>
+      <a href="/dashboard" class="nav-link active">Dashboard</a>
+    </div>
+    <div class="nav-auth">
+      <% if (user) { %>
+        <a href="/dashboard" class="btn-discord btn-discord-outline">Servers</a>
+        <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=64" class="user-avatar" alt="Avatar">
+      <% } %>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-header" style="padding-top: 20px;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <% if (guild.iconURL()) { %>
+          <img src="<%= guild.iconURL({ dynamic: true, size: 64 }) %>" style="width: 56px; height: 56px; border-radius: 16px;" alt="">
+        <% } %>
+        <div>
+          <h1 class="dashboard-title"><%= guild.name %></h1>
+          <p style="color: var(--text-secondary); margin-top: 2px;">Server Settings</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Welcome Settings -->
+    <div class="settings-section animate-in delay-1">
+      <h3 class="settings-title">👋 Welcome System</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Welcome Enabled</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.welcome_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="welcomeEnabled" value="<%= config.welcome_enabled ? 1 : 0 %>">
+            <span>Enable welcome messages</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Welcome Channel</label>
+          <select name="welcomeChannel" class="form-select">
+            <option value="">Select a channel</option>
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>" <%= config.welcome_channel === ch.id ? 'selected' : '' %>>
+                #<%= ch.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Welcome Message</label>
+          <textarea name="welcomeMessage" class="form-textarea" placeholder="Welcome {user} to **{server}**! You are member #{count}!"><%= config.welcome_message || 'Welcome {user} to **{server}**! You are member #{count}!' %></textarea>
+          <small style="color: var(--text-muted);">Variables: {user} = mention, {server} = server name, {count} = member count</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Welcome Image</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.welcome_image ? 'active' : '' %>"></div>
+            <input type="hidden" name="welcomeImage" value="<%= config.welcome_image ? 1 : 0 %>">
+            <span>Generate welcome image</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Embed Color</label>
+          <input type="color" name="welcomeColor" class="form-input" value="<%= config.welcome_color || '#5865F2' %>" style="height: 44px; padding: 4px;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Embed Title</label>
+          <input type="text" name="welcomeTitle" class="form-input" value="<%= config.welcome_title || 'Welcome!' %>" placeholder="Welcome!">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Embed Footer</label>
+          <input type="text" name="welcomeFooter" class="form-input" value="<%= config.welcome_footer || 'Thanks for joining!' %>" placeholder="Thanks for joining!">
+        </div>
+
+        <button type="submit" class="btn-save">Save Welcome Settings</button>
+      </form>
+    </div>
+
+    <!-- Goodbye Settings -->
+    <div class="settings-section animate-in delay-2">
+      <h3 class="settings-title">👋 Goodbye System</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Goodbye Enabled</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.goodbye_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="goodbyeEnabled" value="<%= config.goodbye_enabled ? 1 : 0 %>">
+            <span>Enable goodbye messages</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Goodbye Channel</label>
+          <select name="goodbyeChannel" class="form-select">
+            <option value="">Select a channel</option>
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>" <%= config.goodbye_channel === ch.id ? 'selected' : '' %>>
+                #<%= ch.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Goodbye Message</label>
+          <textarea name="goodbyeMessage" class="form-textarea" placeholder="Goodbye {user}! We will miss you!"><%= config.goodbye_message || 'Goodbye {user}, we will miss you!' %></textarea>
+        </div>
+
+        <button type="submit" class="btn-save">Save Goodbye Settings</button>
+      </form>
+    </div>
+
+    <!-- Auto Role Settings -->
+    <div class="settings-section animate-in delay-3">
+      <h3 class="settings-title">🎭 Auto Role</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Auto Role Enabled</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.autorole_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="autoroleEnabled" value="<%= config.autorole_enabled ? 1 : 0 %>">
+            <span>Enable auto role</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select name="autoRole" class="form-select">
+            <option value="">Select a role</option>
+            <% roles.forEach(role => { %>
+              <option value="<%= role.id %>" <%= config.autorole_id === role.id ? 'selected' : '' %>>
+                <%= role.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-save">Save Auto Role Settings</button>
+      </form>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="settings-section animate-in delay-4">
+      <h3 class="settings-title">📋 Recent Activity</h3>
+      <% if (logs.length === 0) { %>
+        <p style="color: var(--text-muted); text-align: center; padding: 24px;">No activity yet</p>
+      <% } else { %>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>User ID</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% logs.slice(0, 20).forEach(log => { %>
+              <tr>
+                <td>
+                  <span class="tag <%= log.type === 'join' ? 'tag-success' : log.type === 'leave' ? 'tag-danger' : 'tag-info' %>">
+                    <%= log.type %>
+                  </span>
+                </td>
+                <td><%= log.user_tag %></td>
+                <td><%= new Date(log.timestamp).toLocaleString() %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>WelcomeBot &copy; 2026 | Built with love for the Discord community</p>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

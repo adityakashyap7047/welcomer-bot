@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status - WelcomeBot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-animation"></div>
+  <div class="grid-overlay"></div>
+  <div class="particles"></div>
+
+  <nav class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="logo">👋</div>
+      WelcomeBot
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/commands" class="nav-link">Commands</a>
+      <a href="/status" class="nav-link active">Status</a>
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+    </div>
+    <div class="nav-auth">
+      <% if (user) { %>
+        <a href="/dashboard" class="btn-discord btn-discord-outline">Dashboard</a>
+      <% } else { %>
+        <a href="/auth/login" class="btn-discord">Login with Discord</a>
+      <% } %>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="section-header" style="padding-top: 40px;">
+      <h1 class="section-title" style="font-size: 2.8rem;">
+        <span class="status-indicator"></span> Bot Status
+      </h1>
+      <p class="section-desc">Real-time statistics and health monitoring</p>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card" data-animate>
+        <div class="status-indicator"></div>
+        <div class="stat-number" style="font-size: 2rem; margin-bottom: 4px;" data-stat="guilds"><%= stats.guilds %></div>
+        <div class="stat-label">Servers</div>
+      </div>
+      <div class="status-card" data-animate>
+        <div class="status-indicator"></div>
+        <div class="stat-number" style="font-size: 2rem; margin-bottom: 4px;" data-stat="users"><%= stats.users %></div>
+        <div class="stat-label">Users Reached</div>
+      </div>
+      <div class="status-card" data-animate>
+        <div class="status-indicator"></div>
+        <div class="stat-number" style="font-size: 2rem; margin-bottom: 4px;" data-stat-ping><%= stats.ping %>ms</div>
+        <div class="stat-label">API Latency</div>
+      </div>
+      <div class="status-card" data-animate>
+        <div class="status-indicator"></div>
+        <div class="stat-number" style="font-size: 2rem; margin-bottom: 4px;" data-stat-memory><%= stats.memory %>MB</div>
+        <div class="stat-label">Memory Usage</div>
+      </div>
+      <div class="status-card" data-animate>
+        <div class="status-indicator"></div>
+        <div class="stat-number" style="font-size: 2rem; margin-bottom: 4px;" data-stat-uptime>...</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+      <div class="status-card" data-animate>
+        <div class="status-indicator"></div>
+        <div class="stat-number" style="font-size: 2rem; margin-bottom: 4px; color: #57F287;">Online</div>
+        <div class="stat-label">System Status</div>
+      </div>
+    </div>
+
+    <div class="settings-section" style="margin-top: 40px;" data-animate>
+      <h3 class="settings-title">System Information</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div>
+          <div class="form-label">Node.js Version</div>
+          <div style="font-weight: 600;"><%= process.version %></div>
+        </div>
+        <div>
+          <div class="form-label">Platform</div>
+          <div style="font-weight: 600;"><%= process.platform %></div>
+        </div>
+        <div>
+          <div class="form-label">Discord.js</div>
+          <div style="font-weight: 600;">v14.x</div>
+        </div>
+        <div>
+          <div class="form-label">Database</div>
+          <div style="font-weight: 600;">SQLite</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>WelcomeBot &copy; 2026 | Built with love for the Discord community</p>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
