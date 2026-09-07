@@ -1,12 +1,10 @@
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  name: 'roleinfo',
-  description: 'Get information about a role',
-  async execute(message, args, client) {
-    const role = message.mentions.roles.first() || message.guild.roles.cache.get(args[0]);
-    if (!role) return message.reply({ content: 'Please mention a role or provide a role ID.' });
-
+  data: new SlashCommandBuilder().setName('roleinfo').setDescription('Get information about a role')
+    .addRoleOption(o => o.setName('role').setDescription('Role to inspect').setRequired(true)),
+  async execute(interaction) {
+    const role = interaction.options.getRole('role');
     const embed = new EmbedBuilder()
       .setColor(role.hexColor)
       .setTitle(`Role: ${role.name}`)
@@ -20,6 +18,6 @@ module.exports = {
         { name: 'Created', value: `<t:${Math.floor(role.createdTimestamp / 1000)}:R>`, inline: true }
       )
       .setTimestamp();
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   }
 };

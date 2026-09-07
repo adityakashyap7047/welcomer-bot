@@ -43,13 +43,35 @@ async function initDatabase() {
     total_commands INTEGER DEFAULT 0, last_updated TEXT DEFAULT (datetime('now'))
   )`);
 
-  // Add missing columns if they don't exist
   const addColumn = (table, col, type, def) => {
     try { db.run(`ALTER TABLE ${table} ADD COLUMN ${col} ${type} DEFAULT ${def}`); } catch {}
   };
+
   addColumn('guilds', 'welcome_title', 'TEXT', "'Welcome!'");
   addColumn('guilds', 'welcome_footer', 'TEXT', "'Thanks for joining!'");
   addColumn('guilds', 'welcome_image', 'INTEGER', 0);
+
+  addColumn('guilds', 'anti_raid_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'raid_threshold', 'INTEGER', 5);
+  addColumn('guilds', 'raid_window', 'INTEGER', 30);
+  addColumn('guilds', 'raid_action', 'TEXT', "'kick'");
+  addColumn('guilds', 'anti_spam_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'spam_threshold', 'INTEGER', 5);
+  addColumn('guilds', 'anti_badwords_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'bad_words', 'TEXT', "''");
+  addColumn('guilds', 'anti_caps_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'caps_threshold', 'INTEGER', 70);
+  addColumn('guilds', 'anti_links_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'anti_nuke_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'anti_mass_mention_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'mass_mention_threshold', 'INTEGER', 5);
+  addColumn('guilds', 'audit_log_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'lockdown_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'lockdown_channel', 'TEXT', "''");
+  addColumn('guilds', 'auto_punish', 'TEXT', "'timeout'");
+  addColumn('guilds', 'verification_enabled', 'INTEGER', 0);
+  addColumn('guilds', 'verification_role', 'TEXT', "''");
+  addColumn('guilds', 'verification_channel', 'TEXT', "''");
 
   db.run(`CREATE TABLE IF NOT EXISTS stats (
     id INTEGER PRIMARY KEY AUTOINCREMENT, guildId TEXT, event TEXT, userId TEXT,
@@ -82,6 +104,33 @@ async function initDatabase() {
     PRIMARY KEY (user_id, guild_id)
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS whitelisted_servers (
+    guild_id TEXT PRIMARY KEY,
+    guild_name TEXT,
+    added_by TEXT,
+    added_at TEXT DEFAULT (datetime('now')),
+    is_active INTEGER DEFAULT 1
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS dm_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT,
+    user_id TEXT,
+    user_tag TEXT,
+    channel_id TEXT,
+    type TEXT DEFAULT 'join',
+    timestamp TEXT DEFAULT (datetime('now'))
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS protection_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT,
+    user_id TEXT,
+    action TEXT,
+    reason TEXT,
+    timestamp TEXT DEFAULT (datetime('now'))
+  )`);
+
   saveDatabase();
   console.log('\x1b[32m✓\x1b[0m Database initialized');
 }
@@ -97,7 +146,20 @@ setInterval(saveDatabase, 30000);
 const dbWrapper = {
   prepare(sql) {
     return {
-      run(...params) { db.run(sql, params); saveDatabase(); },
+      run(...params) {
+        db.run(sql, params);
+        let lastId = 0;
+        let changes = 0;
+        try {
+          const r = db.exec('SELECT last_insert_rowid() as id, changes() as c');
+          if (r.length > 0) {
+            lastId = r[0].values[0][0] || 0;
+            changes = r[0].values[0][1] || 0;
+          }
+        } catch {}
+        saveDatabase();
+        return { lastInsertRowid: lastId, changes };
+      },
       get(...params) {
         const stmt = db.prepare(sql);
         stmt.bind(params);

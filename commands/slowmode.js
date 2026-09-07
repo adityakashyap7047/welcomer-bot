@@ -1,21 +1,21 @@
-const { EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
-  name: 'slowmode',
-  description: 'Set slowmode for a channel',
-  async execute(message, args, client) {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageChannels))
-      return message.reply({ content: 'You need ManageChannels permission.' });
+  data: new SlashCommandBuilder()
+    .setName('slowmode')
+    .setDescription('Set slowmode delay for a channel')
+    .addIntegerOption(opt => opt.setName('seconds').setDescription('Duration (0 to disable)').setRequired(true).setMinValue(0).setMaxValue(21600))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+  async execute(interaction, client, db, botStats) {
+    botStats.commandsUsed++;
+    const seconds = interaction.options.getInteger('seconds');
+    await interaction.channel.setRateLimitPerUser(seconds);
 
-    const seconds = parseInt(args[0]) || 0;
-    if (seconds < 0 || seconds > 21600) return message.reply({ content: 'Slowmode must be 0-21600 seconds.' });
-
-    await message.channel.setRateLimitPerUser(seconds);
     const embed = new EmbedBuilder()
-      .setColor('#5865F2')
+      .setColor('#FEE75C')
       .setTitle('Slowmode Updated')
       .setDescription(seconds === 0 ? 'Slowmode disabled.' : `Slowmode set to **${seconds}** seconds.`)
       .setTimestamp();
-    message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   }
 };

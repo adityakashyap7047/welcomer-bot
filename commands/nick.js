@@ -1,24 +1,21 @@
-const { EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  name: 'nick',
-  description: 'Change a member\'s nickname',
-  async execute(message, args, client) {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageNicknames))
-      return message.reply({ content: 'You need ManageNicknames permission.' });
-
-    const member = message.mentions.members.first();
-    if (!member) return message.reply({ content: 'Please mention a member.' });
-
-    const nickname = args.slice(1).join(' ');
-    if (!nickname) return message.reply({ content: 'Please provide a nickname.' });
-
-    await member.setNickname(nickname);
-    const embed = new EmbedBuilder()
-      .setColor('#57F287')
-      .setTitle('Nickname Changed')
-      .setDescription(`Changed **${member.user.tag}**'s nickname to **${nickname}**.`)
-      .setTimestamp();
-    message.reply({ embeds: [embed] });
+  data: new SlashCommandBuilder().setName('nick').setDescription('Change a member nickname')
+    .addUserOption(o => o.setName('target').setDescription('Member to change nickname').setRequired(true))
+    .addStringOption(o => o.setName('nickname').setDescription('New nickname').setRequired(true).setMaxLength(32))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames),
+  async execute(interaction) {
+    const target = interaction.options.getUser('target');
+    const member = await interaction.guild.members.fetch(target.id).catch(() => null);
+    if (!member) return interaction.reply({ content: 'User not found.', ephemeral: true });
+    if (!member.manageable) return interaction.reply({ content: 'Cannot change this nickname.', ephemeral: true });
+    await member.setNickname(interaction.options.getString('nickname'));
+    await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor(0x57F287)
+        .setDescription(`Nickname changed for ${target} to **${interaction.options.getString('nickname')}**`)
+        .setTimestamp()]
+    });
   }
 };

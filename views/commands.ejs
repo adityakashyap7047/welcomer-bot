@@ -34,207 +34,38 @@
   <div class="container">
     <div class="section-header" style="padding-top: 40px;">
       <h1 class="section-title" style="font-size: 2.8rem;">All Commands</h1>
-      <p class="section-desc">40+ commands across 5 categories. Use them all in your server!</p>
+      <p class="section-desc"><%= commands.length %> commands available. Use them all in your server!</p>
     </div>
 
     <div class="commands-grid">
-      <!-- Welcome System -->
-      <div class="command-card" data-animate>
-        <div class="command-name">/welcome-channel</div>
-        <div class="command-desc">Set the channel for welcome messages</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/welcome-message</div>
-        <div class="command-desc">Customize the welcome message text</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/welcome-toggle</div>
-        <div class="command-desc">Enable or disable the welcome system</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/welcome-preview</div>
-        <div class="command-desc">Preview how your welcome message looks</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/welcome-color</div>
-        <div class="command-desc">Set the embed color for welcome messages</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/welcome-title</div>
-        <div class="command-desc">Set the embed title for welcome messages</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/goodbye-channel</div>
-        <div class="command-desc">Set the channel for goodbye messages</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/goodbye-message</div>
-        <div class="command-desc">Customize the goodbye message text</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/goodbye-toggle</div>
-        <div class="command-desc">Enable or disable goodbye messages</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/autorole</div>
-        <div class="command-desc">Auto-assign roles to new members</div>
-        <span class="command-category cat-welcome">Welcome</span>
-      </div>
-
-      <!-- Moderation -->
-      <div class="command-card" data-animate>
-        <div class="command-name">/kick</div>
-        <div class="command-desc">Kick a member from the server</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/ban</div>
-        <div class="command-desc">Ban a member with optional message purge</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/unban</div>
-        <div class="command-desc">Unban a user by their ID</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/mute</div>
-        <div class="command-desc">Timeout a member for a set duration</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/unmute</div>
-        <div class="command-desc">Remove timeout from a member</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/purge</div>
-        <div class="command-desc">Bulk delete messages from a channel</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/lock</div>
-        <div class="command-desc">Lock a channel to prevent messages</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/unlock</div>
-        <div class="command-desc">Unlock a previously locked channel</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/slowmode</div>
-        <div class="command-desc">Set slowmode delay for a channel</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/warn</div>
-        <div class="command-desc">Warn a member for rule violations</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/warnings</div>
-        <div class="command-desc">View all warnings for a user</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/clear-warnings</div>
-        <div class="command-desc">Clear all warnings for a user</div>
-        <span class="command-category cat-mod">Moderation</span>
-      </div>
-
-      <!-- Utility -->
-      <div class="command-card" data-animate>
-        <div class="command-name">/ping</div>
-        <div class="command-desc">Check bot and API latency</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/server-info</div>
-        <div class="command-desc">Get detailed server information</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/user-info</div>
-        <div class="command-desc">Get detailed user information</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/avatar</div>
-        <div class="command-desc">Get a user's avatar in full resolution</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/banner</div>
-        <div class="command-desc">Get a user's profile banner</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/role-info</div>
-        <div class="command-desc">Get information about a role</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/member-count</div>
-        <div class="command-desc">Get detailed member statistics</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/invite</div>
-        <div class="command-desc">Get the bot invite link</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/calc</div>
-        <div class="command-desc">Evaluate a math expression</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/remind</div>
-        <div class="command-desc">Set a timed reminder</div>
-        <span class="command-category cat-util">Utility</span>
-      </div>
-
-      <!-- Fun -->
-      <div class="command-card" data-animate>
-        <div class="command-name">/8ball</div>
-        <div class="command-desc">Ask the magic 8-ball a question</div>
-        <span class="command-category cat-fun">Fun</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/coinflip</div>
-        <div class="command-desc">Flip a coin - heads or tails?</div>
-        <span class="command-category cat-fun">Fun</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/dice</div>
-        <div class="command-desc">Roll a dice with custom sides</div>
-        <span class="command-category cat-fun">Fun</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/rps</div>
-        <div class="command-desc">Play rock paper scissors</div>
-        <span class="command-category cat-fun">Fun</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/poll</div>
-        <div class="command-desc">Create an interactive poll</div>
-        <span class="command-category cat-fun">Fun</span>
-      </div>
-      <div class="command-card" data-animate>
-        <div class="command-name">/giveaway</div>
-        <div class="command-desc">Start a timed giveaway</div>
-        <span class="command-category cat-fun">Fun</span>
-      </div>
+      <% const categories = {
+        'Welcome System': ['setup-welcome', 'test-welcome', 'disable-welcome', 'setup-goodbye', 'disable-goodbye', 'setup-autorole', 'disable-autorole', 'setup-boost', 'setup-logs', 'welcome-preview', 'welcome-logs', 'pause-welcome', 'resume-welcome', 'clean-welcomes'],
+        'Moderation': ['kick', 'ban', 'unban', 'mute', 'unmute', 'warn', 'warnings', 'clearwarnings', 'purge', 'lock', 'unlock', 'slowmode', 'timeout', 'untimeout'],
+        'Fun': ['8ball', 'coinflip', 'dice', 'rps', 'poll', 'giveaway', 'joke', 'random', 'calc', 'remind'],
+        'Utility': ['help', 'ping', 'invite', 'serverinfo', 'userinfo', 'botinfo', 'avatar', 'banner', 'roleinfo', 'channelinfo', 'stats', 'top-commands', 'widget', 'set-prefix', 'nick', 'role-add', 'role-remove'],
+        'Leveling': ['level', 'leaderboard'],
+        'Management': ['broadcast', 'migrate-server', 'join-all', 'mass-dm', 'setup-reaction-role', 'setup-verification', 'verify-stats', 'msg', 'say']
+      }; %>
+      <% const catColors = {
+        'Welcome System': 'cat-welcome',
+        'Moderation': 'cat-mod',
+        'Fun': 'cat-fun',
+        'Utility': 'cat-util',
+        'Leveling': 'cat-util',
+        'Management': 'cat-mod'
+      }; %>
+      <% for (const [category, cmds] of Object.entries(categories)) { %>
+        <% cmds.forEach(cmdName => { %>
+          <% const cmd = commands.find(c => c.name === cmdName); %>
+          <% if (cmd) { %>
+            <div class="command-card" data-animate>
+              <div class="command-name">/<%= cmd.name %></div>
+              <div class="command-desc"><%= cmd.description %></div>
+              <span class="command-category <%= catColors[category] || 'cat-util' %>"><%= category %></span>
+            </div>
+          <% } %>
+        <% }); %>
+      <% } %>
     </div>
   </div>
 

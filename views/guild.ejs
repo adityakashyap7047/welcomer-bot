@@ -41,6 +41,9 @@
           <p style="color: var(--text-secondary); margin-top: 2px;">Server Settings</p>
         </div>
       </div>
+      <% if (user && process.env.BOT_OWNER_ID && user.id === process.env.BOT_OWNER_ID) { %>
+        <a href="/whitelist" class="btn-discord" style="background:#5865F2;">Whitelist Manager</a>
+      <% } %>
     </div>
 
     <!-- Welcome Settings -->
@@ -71,8 +74,18 @@
 
         <div class="form-group">
           <label class="form-label">Welcome Message</label>
-          <textarea name="welcomeMessage" class="form-textarea" placeholder="Welcome {user} to **{server}**! You are member #{count}!"><%= config.welcome_message || 'Welcome {user} to **{server}**! You are member #{count}!' %></textarea>
-          <small style="color: var(--text-muted);">Variables: {user} = mention, {server} = server name, {count} = member count</small>
+          <textarea name="welcomeMessage" class="form-textarea" placeholder="Welcome {user} to **{server}**! You are member #{count}!"><%= config.welcome_message || 'Welcome to {server}, {user}! You are member #{count}!' %></textarea>
+          <small style="color: var(--text-muted);">Variables: {user} = mention, {username} = username, {displayname} = display name, {server} = server name, {count} = member count, {tag} = user tag, {created} = account age, {id} = user id</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Welcome Title</label>
+          <input type="text" name="welcomeTitle" class="form-input" value="<%= config.welcome_title || 'Welcome!' %>" placeholder="Welcome!">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Welcome Footer</label>
+          <input type="text" name="welcomeFooter" class="form-input" value="<%= config.welcome_footer || 'Thanks for joining!' %>" placeholder="Thanks for joining!">
         </div>
 
         <div class="form-group">
@@ -86,17 +99,7 @@
 
         <div class="form-group">
           <label class="form-label">Embed Color</label>
-          <input type="color" name="welcomeColor" class="form-input" value="<%= config.welcome_color || '#5865F2' %>" style="height: 44px; padding: 4px;">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Embed Title</label>
-          <input type="text" name="welcomeTitle" class="form-input" value="<%= config.welcome_title || 'Welcome!' %>" placeholder="Welcome!">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Embed Footer</label>
-          <input type="text" name="welcomeFooter" class="form-input" value="<%= config.welcome_footer || 'Thanks for joining!' %>" placeholder="Thanks for joining!">
+          <input type="color" name="welcomeColor" class="form-input" value="<%= config.welcome_color || '#00ff88' %>" style="height: 44px; padding: 4px;">
         </div>
 
         <button type="submit" class="btn-save">Save Welcome Settings</button>
@@ -134,7 +137,39 @@
           <textarea name="goodbyeMessage" class="form-textarea" placeholder="Goodbye {user}! We will miss you!"><%= config.goodbye_message || 'Goodbye {user}, we will miss you!' %></textarea>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">Goodbye Embed Color</label>
+          <input type="color" name="goodbyeColor" class="form-input" value="<%= config.goodbye_color || '#ff4444' %>" style="height: 44px; padding: 4px;">
+        </div>
+
         <button type="submit" class="btn-save">Save Goodbye Settings</button>
+      </form>
+    </div>
+
+    <!-- Boost Settings -->
+    <div class="settings-section animate-in delay-3">
+      <h3 class="settings-title">🚀 Boost Announcements</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Boost Channel</label>
+          <select name="boostChannel" class="form-select">
+            <option value="">Select a channel</option>
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>" <%= config.boost_channel === ch.id ? 'selected' : '' %>>
+                #<%= ch.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Boost Message</label>
+          <textarea name="boostMessage" class="form-textarea" placeholder="{user} just boosted {server}! Thank you!"><%= config.boost_message || '{user} just boosted {server}! Thank you!' %></textarea>
+          <small style="color: var(--text-muted);">Variables: {user} = mention, {server} = server name</small>
+        </div>
+
+        <button type="submit" class="btn-save">Save Boost Settings</button>
       </form>
     </div>
 
@@ -168,8 +203,226 @@
       </form>
     </div>
 
-    <!-- Activity Log -->
+    <!-- Logging & Prefix -->
     <div class="settings-section animate-in delay-4">
+      <h3 class="settings-title">📋 Logging & Prefix</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Log Channel</label>
+          <select name="logChannel" class="form-select">
+            <option value="">Select a channel</option>
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>" <%= config.log_channel === ch.id ? 'selected' : '' %>>
+                #<%= ch.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Custom Prefix</label>
+          <input type="text" name="prefix" class="form-input" value="<%= config.prefix || '!' %>" placeholder="!" maxlength="5">
+          <small style="color: var(--text-muted);">Max 5 characters</small>
+        </div>
+
+        <button type="submit" class="btn-save">Save Log Settings</button>
+      </form>
+    </div>
+
+    <!-- Server Protection -->
+    <div class="settings-section animate-in delay-4">
+      <h3 class="settings-title">🛡️ Server Protection</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Anti-Raid Protection</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_raid_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiRaidEnabled" value="<%= config.anti_raid_enabled ? 1 : 0 %>">
+            <span>Detect mass joins and auto-punish raiders</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Raid Threshold (joins per window)</label>
+          <input type="number" name="raidThreshold" class="form-input" value="<%= config.raid_threshold || 5 %>" min="2" max="50">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Raid Window (seconds)</label>
+          <input type="number" name="raidWindow" class="form-input" value="<%= config.raid_window || 30 %>" min="10" max="300">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Raid Action</label>
+          <select name="raidAction" class="form-select">
+            <option value="kick" <%= config.raid_action === 'kick' ? 'selected' : '' %>>Kick</option>
+            <option value="ban" <%= config.raid_action === 'ban' ? 'selected' : '' %>>Ban</option>
+            <option value="timeout" <%= config.raid_action === 'timeout' ? 'selected' : '' %>>Timeout</option>
+            <option value="lockdown" <%= config.raid_action === 'lockdown' ? 'selected' : '' %>>Lockdown</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Anti-Spam</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_spam_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiSpamEnabled" value="<%= config.anti_spam_enabled ? 1 : 0 %>">
+            <span>Detect and mute spammers</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Spam Threshold (messages)</label>
+          <input type="number" name="spamThreshold" class="form-input" value="<%= config.spam_threshold || 5 %>" min="2" max="20">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Bad Word Filter</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_badwords_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiBadwordsEnabled" value="<%= config.anti_badwords_enabled ? 1 : 0 %>">
+            <span>Auto-delete messages with bad words</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Bad Words (comma-separated)</label>
+          <input type="text" name="badWords" class="form-input" value="<%= config.bad_words || '' %>" placeholder="word1,word2,word3">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Caps Filter</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_caps_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiCapsEnabled" value="<%= config.anti_caps_enabled ? 1 : 0 %>">
+            <span>Delete messages with too many capital letters</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Caps Threshold (%)</label>
+          <input type="number" name="capsThreshold" class="form-input" value="<%= config.caps_threshold || 70 %>" min="50" max="100">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Link Filter</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_links_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiLinksEnabled" value="<%= config.anti_links_enabled ? 1 : 0 %>">
+            <span>Delete unauthorized links</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Anti-Nuke</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_nuke_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiNukeEnabled" value="<%= config.anti_nuke_enabled ? 1 : 0 %>">
+            <span>Auto-lockdown on mass channel/role deletion</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Anti Mass-Mention</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.anti_mass_mention_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="antiMassMentionEnabled" value="<%= config.anti_mass_mention_enabled ? 1 : 0 %>">
+            <span>Delete messages with too many mentions</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mention Threshold</label>
+          <input type="number" name="massMentionThreshold" class="form-input" value="<%= config.mass_mention_threshold || 5 %>" min="2" max="20">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Audit Log Monitoring</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.audit_log_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="auditLogEnabled" value="<%= config.audit_log_enabled ? 1 : 0 %>">
+            <span>Monitor and log suspicious activity</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Auto-Punish Type</label>
+          <select name="autoPunish" class="form-select">
+            <option value="timeout" <%= config.auto_punish === 'timeout' ? 'selected' : '' %>>Timeout (1 hour)</option>
+            <option value="kick" <%= config.auto_punish === 'kick' ? 'selected' : '' %>>Kick</option>
+            <option value="ban" <%= config.auto_punish === 'ban' ? 'selected' : '' %>>Ban</option>
+            <option value="mute" <%= config.auto_punish === 'mute' ? 'selected' : '' %>>Mute Role</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Audit Log Monitor</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.audit_log_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="auditLogEnabled" value="<%= config.audit_log_enabled ? 1 : 0 %>">
+            <span>Monitor audit log for suspicious activity</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Server Lockdown</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.lockdown_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="lockdownEnabled" value="<%= config.lockdown_enabled ? 1 : 0 %>">
+            <span>Allow lockdown commands</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-save">Save Protection Settings</button>
+      </form>
+    </div>
+
+    <!-- Verification Settings -->
+    <div class="settings-section animate-in delay-5">
+      <h3 class="settings-title">✅ Verification System</h3>
+      <form class="settings-form" data-guild-id="<%= guild.id %>">
+
+        <div class="form-group">
+          <label class="form-label">Verification Enabled</label>
+          <div class="form-toggle">
+            <div class="toggle-switch <%= config.verification_enabled ? 'active' : '' %>"></div>
+            <input type="hidden" name="verificationEnabled" value="<%= config.verification_enabled ? 1 : 0 %>">
+            <span>Require verification for new members</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Verification Channel</label>
+          <select name="verificationChannel" class="form-select">
+            <option value="">Select a channel</option>
+            <% channels.forEach(ch => { %>
+              <option value="<%= ch.id %>" <%= config.verification_channel === ch.id ? 'selected' : '' %>>
+                #<%= ch.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Verification Role</label>
+          <select name="verificationRole" class="form-select">
+            <option value="">Select a role</option>
+            <% roles.forEach(role => { %>
+              <option value="<%= role.id %>" <%= config.verification_role === role.id ? 'selected' : '' %>>
+                <%= role.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-save">Save Verification Settings</button>
+      </form>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="settings-section animate-in delay-5">
       <h3 class="settings-title">📋 Recent Activity</h3>
       <% if (logs.length === 0) { %>
         <p style="color: var(--text-muted); text-align: center; padding: 24px;">No activity yet</p>
@@ -178,7 +431,7 @@
           <thead>
             <tr>
               <th>Event</th>
-              <th>User ID</th>
+              <th>User</th>
               <th>Time</th>
             </tr>
           </thead>

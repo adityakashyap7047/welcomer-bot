@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whitelist - WelcomeBot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-animation"></div>
+  <div class="grid-overlay"></div>
+  <div class="particles"></div>
+
+  <nav class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="logo">👋</div>
+      WelcomeBot
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/commands" class="nav-link">Commands</a>
+      <a href="/status" class="nav-link">Status</a>
+      <a href="/dashboard" class="nav-link">Dashboard</a>
+      <a href="/whitelist" class="nav-link active">Whitelist</a>
+    </div>
+    <div class="nav-auth">
+      <% if (user) { %>
+        <a href="/dashboard" class="btn-discord btn-discord-outline">Dashboard</a>
+        <a href="/auth/logout" class="btn-discord">Logout</a>
+      <% } else { %>
+        <a href="/auth/login" class="btn-discord">Login with Discord</a>
+      <% } %>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-header" style="padding-top: 20px;">
+      <div>
+        <h1 class="dashboard-title">Server Whitelist</h1>
+        <p style="color: var(--text-secondary); margin-top: 4px;">Manage which servers can use the bot</p>
+      </div>
+      <div class="live-counter">
+        <div class="live-dot"></div>
+        <%= servers.length %> whitelisted
+      </div>
+    </div>
+
+    <!-- Add Server -->
+    <div class="settings-section animate-in delay-1">
+      <h3 class="settings-title">➕ Add Server to Whitelist</h3>
+      <div class="form-group">
+        <label class="form-label">Select a server the bot is in</label>
+        <select id="addGuildSelect" class="form-select">
+          <option value="">Choose a server...</option>
+          <% allGuilds.forEach(g => { %>
+            <option value="<%= g.id %>"><%= g.name %> (<%= g.memberCount %> members)</option>
+          <% }); %>
+        </select>
+      </div>
+      <button onclick="addWhitelist()" class="btn-save">Add to Whitelist</button>
+    </div>
+
+    <!-- Whitelisted Servers -->
+    <div class="settings-section animate-in delay-2">
+      <h3 class="settings-title">📋 Whitelisted Servers</h3>
+      <% if (servers.length === 0) { %>
+        <p style="color: var(--text-muted); text-align: center; padding: 24px;">No servers whitelisted yet</p>
+      <% } else { %>
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Server</th>
+              <th>Server ID</th>
+              <th>Added</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% servers.forEach(server => { %>
+              <tr id="whitelist-<%= server.guild_id %>">
+                <td><strong><%= server.guild_name %></strong></td>
+                <td><code><%= server.guild_id %></code></td>
+                <td><%= new Date(server.added_at).toLocaleString() %></td>
+                <td>
+                  <% if (server.is_active) { %>
+                    <span class="tag tag-success">Active</span>
+                  <% } else { %>
+                    <span class="tag tag-danger">Disabled</span>
+                  <% } %>
+                </td>
+                <td>
+                  <button onclick="toggleWhitelist('<%= server.guild_id %>', <%= server.is_active ? 0 : 1 %>)" class="btn-save" style="padding: 6px 14px; font-size: 0.8rem;">
+                    <%= server.is_active ? 'Disable' : 'Enable' %>
+                  </button>
+                  <button onclick="removeWhitelist('<%= server.guild_id %>')" class="btn-save" style="padding: 6px 14px; font-size: 0.8rem; background: linear-gradient(135deg, #ED4245, #ff6b6b);">
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>WelcomeBot &copy; 2026 | Built with love for the Discord community</p>
+  </footer>
+
+  <script src="/js/main.js"></script>
+  <script>
+    async function addWhitelist() {
+      const guildId = document.getElementById('addGuildSelect').value;
+      if (!guildId) return showToast('Select a server first', 'error');
+      try {
+        const res = await fetch('/api/whitelist/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guildId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Server added to whitelist!');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          showToast(data.error || 'Failed', 'error');
+        }
+      } catch { showToast('Network error', 'error'); }
+    }
+
+    async function toggleWhitelist(guildId, active) {
+      try {
+        const res = await fetch('/api/whitelist/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guildId, active: !!active })
+        });
+        if (res.ok) { showToast('Updated!'); setTimeout(() => location.reload(), 1000); }
+        else showToast('Failed', 'error');
+      } catch { showToast('Network error', 'error'); }
+    }
+
+    async function removeWhitelist(guildId) {
+      if (!confirm('Remove this server from whitelist?')) return;
+      try {
+        const res = await fetch('/api/whitelist/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guildId })
+        });
+        if (res.ok) {
+          showToast('Removed!');
+          const row = document.getElementById('whitelist-' + guildId);
+          if (row) row.remove();
+        } else showToast('Failed', 'error');
+      } catch { showToast('Network error', 'error'); }
+    }
+  </script>
+</body>
+</html>

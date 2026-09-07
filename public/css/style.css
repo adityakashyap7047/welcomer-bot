@@ -654,6 +654,7 @@ body {
 .cat-mod { background: rgba(254, 231, 92, 0.15); color: #FEE75C; }
 .cat-util { background: rgba(88, 101, 242, 0.15); color: #5865F2; }
 .cat-fun { background: rgba(235, 69, 158, 0.15); color: #EB459E; }
+.cat-level { background: rgba(255, 215, 0, 0.15); color: #FFD700; }
 
 /* ── Status Page ── */
 .status-grid {

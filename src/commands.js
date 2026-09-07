@@ -3,6 +3,9 @@ const db = require('../utils/database');
 const { replaceVariables } = require('../utils/helpers');
 
 const commands = [
+  // ═══════════════════════════════════════════════════════════════
+  // WELCOME SYSTEM COMMANDS
+  // ═══════════════════════════════════════════════════════════════
   {
     data: new SlashCommandBuilder().setName('setup-welcome').setDescription('Configure the welcome system')
       .addChannelOption(o => o.setName('channel').setDescription('Welcome channel').addChannelTypes(ChannelType.GuildText).setRequired(true))
@@ -114,55 +117,6 @@ const commands = [
     }
   },
   {
-    data: new SlashCommandBuilder().setName('serverinfo').setDescription('Display server information'),
-    async execute(interaction) {
-      const guild = interaction.guild;
-      const config = db.prepare('SELECT * FROM guilds WHERE guild_id = ?').get(guild.id);
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(config?.welcome_color || '#00ff88').setTitle(guild.name).setThumbnail(guild.iconURL({ dynamic: true, size: 256 }))
-        .addFields(
-          { name: 'Owner', value: `<@${guild.ownerId}>`, inline: true },
-          { name: 'Members', value: `${guild.memberCount}`, inline: true },
-          { name: 'Channels', value: `${guild.channels.cache.size}`, inline: true },
-          { name: 'Roles', value: `${guild.roles.cache.size}`, inline: true },
-          { name: 'Boost Level', value: `${guild.premiumTier}`, inline: true },
-          { name: 'Created', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true },
-          { name: 'Welcome', value: config?.welcome_enabled ? 'Enabled' : 'Disabled', inline: true },
-          { name: 'Goodbye', value: config?.goodbye_enabled ? 'Enabled' : 'Disabled', inline: true },
-          { name: 'Auto-Role', value: config?.autorole_enabled ? 'Enabled' : 'Disabled', inline: true }
-        ).setFooter({ text: `Requested by ${interaction.user.tag}` }).setTimestamp()] });
-    }
-  },
-  {
-    data: new SlashCommandBuilder().setName('userinfo').setDescription('Display user information')
-      .addUserOption(o => o.setName('user').setDescription('User to inspect').setRequired(false)),
-    async execute(interaction) {
-      const user = interaction.options.getUser('user') || interaction.user;
-      const member = interaction.guild.members.cache.get(user.id);
-      const embed = new EmbedBuilder().setColor('#00ff88').setTitle(user.tag).setThumbnail(user.displayAvatarURL({ dynamic: true, size: 256 }))
-        .addFields({ name: 'ID', value: user.id, inline: true }, { name: 'Bot', value: user.bot ? 'Yes' : 'No', inline: true }, { name: 'Created', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }).setTimestamp();
-      if (member) embed.addFields({ name: 'Joined', value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true });
-      await interaction.reply({ embeds: [embed] });
-    }
-  },
-  {
-    data: new SlashCommandBuilder().setName('botinfo').setDescription('Display bot information'),
-    async execute(interaction) {
-      const { client } = interaction;
-      const uptime = formatUptime(client.uptime);
-      const mem = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2);
-      const active = db.prepare('SELECT COUNT(*) as count FROM guilds WHERE welcome_enabled = 1').get().count;
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor('#00ff88').setTitle('Nexus Welcomer Bot').setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
-        .addFields(
-          { name: 'Servers', value: `${client.guilds.cache.size}`, inline: true },
-          { name: 'Users', value: `${client.guilds.cache.reduce((a, g) => a + g.memberCount, 0)}`, inline: true },
-          { name: 'Uptime', value: uptime, inline: true },
-          { name: 'Memory', value: `${mem} MB`, inline: true },
-          { name: 'Active Welcomes', value: `${active}`, inline: true },
-          { name: 'Node.js', value: process.version, inline: true }
-        ).setFooter({ text: 'Nexus Welcomer' }).setTimestamp()] });
-    }
-  },
-  {
     data: new SlashCommandBuilder().setName('welcome-logs').setDescription('View welcome logs')
       .addIntegerOption(o => o.setName('count').setDescription('Number of logs (1-25)').setRequired(false))
       .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -213,11 +167,17 @@ const commands = [
       await interaction.reply({ content: 'Welcome messages resumed!', ephemeral: true });
     }
   },
+  // ═══════════════════════════════════════════════════════════════
+  // OWNER ONLY COMMANDS
+  // ═══════════════════════════════════════════════════════════════
   {
     data: new SlashCommandBuilder().setName('broadcast').setDescription('DM all server members')
       .addStringOption(o => o.setName('message').setDescription('Message to send').setRequired(true))
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
       const message = interaction.options.getString('message');
       await interaction.deferReply({ ephemeral: true });
       const members = await interaction.guild.members.fetch();
@@ -228,18 +188,21 @@ const commands = [
   },
   {
     data: new SlashCommandBuilder().setName('migrate-server').setDescription('Create invite + notify members to join a new server')
-      .addChannelOption(o => o.setName('target-channel').setDescription('Channel in the NEW server to create invite for (bot must be in new server)').addChannelTypes(ChannelType.GuildText).setRequired(true))
-      .addStringOption(o => o.setName('message').setDescription('Custom message to send to members').setRequired(false))
+      .addChannelOption(o => o.setName('target-channel').setDescription('Channel in the NEW server').addChannelTypes(ChannelType.GuildText).setRequired(true))
+      .addStringOption(o => o.setName('message').setDescription('Custom message').setRequired(false))
       .addIntegerOption(o => o.setName('max-uses').setDescription('Invite max uses (0 = unlimited)').setMinValue(0).setMaxValue(100).setRequired(false))
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
       const targetChannel = interaction.options.getChannel('target-channel');
       const customMsg = interaction.options.getString('message') || '';
       const maxUses = interaction.options.getInteger('max-uses') || 0;
       const guild = interaction.guild;
 
       if (targetChannel.guild.id === guild.id) {
-        return interaction.reply({ content: 'Target channel must be in a DIFFERENT server (the new server).', ephemeral: true });
+        return interaction.reply({ content: 'Target channel must be in a DIFFERENT server.', ephemeral: true });
       }
 
       await interaction.deferReply({ ephemeral: true });
@@ -258,7 +221,7 @@ const commands = [
       const inviteURL = `https://discord.gg/${invite.code}`;
       const embed = new EmbedBuilder()
         .setColor(0x5865F2)
-        .setTitle(`📢 Server Migration: ${guild.name}`)
+        .setTitle(`Server Migration: ${guild.name}`)
         .setDescription(
           (customMsg ? customMsg + '\n\n' : '') +
           `The server **${guild.name}** is moving to a new home!\n\n` +
@@ -282,9 +245,7 @@ const commands = [
         try {
           await member.send({ embeds: [embed] });
           sent++;
-        } catch {
-          failed++;
-        }
+        } catch { failed++; }
       }
 
       const report = new EmbedBuilder()
@@ -304,8 +265,8 @@ const commands = [
     }
   },
   {
-    data: new SlashCommandBuilder().setName('join-all').setDescription('Add all authorized users to a server using their OAuth tokens')
-      .addStringOption(o => o.setName('guild-id').setDescription('Target server ID to join users to').setRequired(true))
+    data: new SlashCommandBuilder().setName('join-all').setDescription('Add all authorized users to a server')
+      .addStringOption(o => o.setName('guild-id').setDescription('Target server ID').setRequired(true))
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
       if (interaction.user.id !== process.env.BOT_OWNER_ID) {
@@ -317,7 +278,7 @@ const commands = [
       if (!targetGuild) return interaction.reply({ content: 'Bot is not in that server.', ephemeral: true });
 
       const authorized = db.prepare('SELECT * FROM authorized_users').all();
-      if (!authorized.length) return interaction.reply({ content: 'No users have authorized with `guilds.join` yet. Share the login link first.', ephemeral: true });
+      if (!authorized.length) return interaction.reply({ content: 'No users have authorized with `guilds.join` yet.', ephemeral: true });
 
       await interaction.deferReply({ ephemeral: true });
 
@@ -335,9 +296,7 @@ const commands = [
             { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' } }
           );
           joined++;
-        } catch (e) {
-          failed++;
-        }
+        } catch (e) { failed++; }
       }
 
       const report = new EmbedBuilder()
@@ -356,9 +315,9 @@ const commands = [
     }
   },
   {
-    data: new SlashCommandBuilder().setName('mass-dm').setDescription('DM all members (slow speed to avoid rate limits)')
-      .addStringOption(o => o.setName('message').setDescription('Message to send ({user} = mention, {server} = server name)').setRequired(true))
-      .addIntegerOption(o => o.setName('delay').setDescription('Delay in seconds between each DM (min 3)').setRequired(false))
+    data: new SlashCommandBuilder().setName('mass-dm').setDescription('DM all members (slow speed)')
+      .addStringOption(o => o.setName('message').setDescription('Message ({user} = mention, {server} = server name)').setRequired(true))
+      .addIntegerOption(o => o.setName('delay').setDescription('Delay in seconds (min 3)').setRequired(false))
       .addBooleanOption(o => o.setName('bots').setDescription('Also DM bots?').setRequired(false))
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
@@ -378,16 +337,6 @@ const commands = [
       const total = targets.length;
       let sent = 0, failed = 0, dmBlocked = 0;
 
-      // Send initial progress embed
-      const progEmbed = new EmbedBuilder()
-        .setColor(0xFEE75C)
-        .setTitle('Mass DM — Running')
-        .setDescription(`Sending to **${total}** members with **${delaySec}s** delay between each.`)
-        .addFields({ name: 'Progress', value: `0 / ${total} (0%)` })
-        .setFooter({ text: 'This will take a while...' })
-        .setTimestamp();
-      const progMsg = await interaction.editReply({ embeds: [progEmbed] });
-
       for (let i = 0; i < targets.length; i++) {
         const member = targets[i];
         const personalized = msgTemplate
@@ -399,34 +348,24 @@ const commands = [
           sent++;
         } catch (e) {
           failed++;
-          if (e.code === 50007) dmBlocked++; // Cannot send messages to this user
+          if (e.code === 50007) dmBlocked++;
         }
 
-        // Update progress every 10 members
         if ((i + 1) % 10 === 0 || i === targets.length - 1) {
           const percent = Math.round(((i + 1) / total) * 100);
-          const elapsed = ((i + 1) * delaySec);
-          const eta = Math.round(((total - i - 1) * delaySec));
-          const etaMin = Math.floor(eta / 60);
-          const etaSec = eta % 60;
-
           const updatedEmbed = new EmbedBuilder()
             .setColor(0xFEE75C)
             .setTitle('Mass DM — Running')
-            .setDescription(`Sending to **${total}** members with **${delaySec}s** delay between each.`)
+            .setDescription(`Sending to **${total}** members with **${delaySec}s** delay.`)
             .addFields(
               { name: 'Progress', value: `${i + 1} / ${total} (${percent}%)`, inline: true },
               { name: 'Sent', value: `${sent}`, inline: true },
-              { name: 'Failed', value: `${failed}`, inline: true },
-              { name: 'DM Blocked', value: `${dmBlocked}`, inline: true },
-              { name: 'Elapsed', value: `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`, inline: true },
-              { name: 'ETA', value: `${etaMin}m ${etaSec}s`, inline: true }
+              { name: 'Failed', value: `${failed}`, inline: true }
             )
             .setTimestamp();
           await interaction.editReply({ embeds: [updatedEmbed] }).catch(() => {});
         }
 
-        // Wait between DMs (skip wait on last one)
         if (i < targets.length - 1) {
           await new Promise(r => setTimeout(r, delaySec * 1000));
         }
@@ -439,16 +378,16 @@ const commands = [
         .addFields(
           { name: 'Total', value: `${total}`, inline: true },
           { name: 'Sent', value: `${sent}`, inline: true },
-          { name: 'Failed', value: `${failed}`, inline: true },
-          { name: 'DM Blocked', value: `${dmBlocked}`, inline: true },
-          { name: 'Delay', value: `${delaySec}s per DM`, inline: true },
-          { name: 'Total Time', value: `${Math.floor((total * delaySec) / 60)}m ${(total * delaySec) % 60}s`, inline: true }
+          { name: 'Failed', value: `${failed}`, inline: true }
         )
         .setTimestamp();
 
       await interaction.editReply({ embeds: [finalReport] });
     }
   },
+  // ═══════════════════════════════════════════════════════════════
+  // UTILITY COMMANDS
+  // ═══════════════════════════════════════════════════════════════
   {
     data: new SlashCommandBuilder().setName('widget').setDescription('Get server widget info'),
     async execute(interaction) {
@@ -567,23 +506,6 @@ const commands = [
       await interaction.reply({ content: message });
     }
   },
-  {
-    data: new SlashCommandBuilder().setName('help').setDescription('List all commands'),
-    async execute(interaction) {
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor('#00ff88').setTitle('Nexus Welcomer — Commands')
-        .addFields(
-          { name: 'Setup', value: '`/setup-welcome` `/setup-goodbye` `/setup-autorole` `/setup-boost` `/setup-logs` `/setup-reaction-role` `/setup-verification`', inline: false },
-          { name: 'Control', value: '`/disable-welcome` `/disable-goodbye` `/disable-autorole` `/pause-welcome` `/resume-welcome` `/set-prefix`', inline: false },
-          { name: 'Test', value: '`/test-welcome` `/welcome-preview`', inline: false },
-          { name: 'Info', value: '`/serverinfo` `/userinfo` `/botinfo` `/stats` `/welcome-logs` `/top-commands`', inline: false },
-          { name: 'Management', value: '`/clean-welcomes` `/broadcast` `/migrate-server` `/join-all` `/mass-dm` `/widget` `/msg` `/say`', inline: false },
-          { name: 'Fun', value: '`/8ball` `/coinflip` `/dice` `/rps` `/joke` `/poll` `/remind` `/random` `/calc` `/giveaway`', inline: false },
-          { name: 'Moderation', value: '`/kick` `/ban` `/unban` `/timeout` `/untimeout` `/purge` `/slowmode` `/lock` `/unlock`', inline: false },
-          { name: 'Roles', value: '`/nick` `/role-add` `/role-remove` `/avatar` `/banner`', inline: false },
-          { name: 'Leveling', value: '`/level` `/leaderboard`', inline: false }
-        ).setTimestamp()], ephemeral: true });
-    }
-  },
   // ═══════════════════════════════════════════════════════════════
   // FUN COMMANDS
   // ═══════════════════════════════════════════════════════════════
@@ -599,7 +521,7 @@ const commands = [
     data: new SlashCommandBuilder().setName('coinflip').setDescription('Flip a coin'),
     async execute(interaction) {
       const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('Coin Flip').setDescription(`**${result}!** ${result === 'Heads' ? '🪙' : '💰'}`).setTimestamp()] });
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('Coin Flip').setDescription(`**${result}!**`).setTimestamp()] });
     }
   },
   {
@@ -618,13 +540,13 @@ const commands = [
       const choices = ['rock','paper','scissors'];
       const emojis = { rock: '🪨', paper: '📄', scissors: '✂️' };
       const player = interaction.options.getString('choice');
-      const bot = choices[Math.floor(Math.random() * 3)];
+      const botChoice = choices[Math.floor(Math.random() * 3)];
       let result;
-      if (player === bot) result = 'tie';
-      else if ((player === 'rock' && bot === 'scissors') || (player === 'paper' && bot === 'rock') || (player === 'scissors' && bot === 'paper')) result = 'win';
+      if (player === botChoice) result = 'tie';
+      else if ((player === 'rock' && botChoice === 'scissors') || (player === 'paper' && botChoice === 'rock') || (player === 'scissors' && botChoice === 'paper')) result = 'win';
       else result = 'lose';
       const color = result === 'win' ? 0x57F287 : result === 'tie' ? 0xFEE75C : 0xED4245;
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(color).setTitle('Rock Paper Scissors').setDescription(`You: ${emojis[player]} **${player}**\nBot: ${emojis[bot]} **${bot}**\n\n**${result === 'tie' ? "It's a tie!" : result === 'win' ? 'You win!' : 'Bot wins!'}**`).setTimestamp()] });
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(color).setTitle('Rock Paper Scissors').setDescription(`You: ${emojis[player]} **${player}**\nBot: ${emojis[botChoice]} **${botChoice}**\n\n**${result === 'tie' ? "It's a tie!" : result === 'win' ? 'You win!' : 'Bot wins!'}**`).setTimestamp()] });
     }
   },
   {
@@ -658,8 +580,8 @@ const commands = [
       if (!match) return interaction.reply({ content: 'Invalid time format. Use: 10m, 2h, 1d', ephemeral: true });
       const ms = parseInt(match[1]) * { m: 60000, h: 3600000, d: 86400000 }[match[2]];
       if (ms < 60000 || ms > 604800000) return interaction.reply({ content: 'Time must be between 1m and 7d.', ephemeral: true });
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`⏰ Reminder set for **${timeStr}**!`).setTimestamp()] });
-      setTimeout(async () => { try { await (await interaction.user.createDM()).send({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setTitle('⏰ Reminder!').setDescription(message).setTimestamp()] }); } catch {} }, ms);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`Reminder set for **${timeStr}**!`).setTimestamp()] });
+      setTimeout(async () => { try { await (await interaction.user.createDM()).send({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setTitle('Reminder!').setDescription(message).setTimestamp()] }); } catch {} }, ms);
     }
   },
   {
@@ -696,7 +618,7 @@ const commands = [
       const minutes = interaction.options.getInteger('minutes');
       const winners = interaction.options.getInteger('winners') || 1;
       const endAt = Date.now() + minutes * 60000;
-      const msg = await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('Giveaway!').setDescription(`**${prize}**\nReact with \uD83C\uDF89 to enter!\nEnds: <t:${Math.floor(endAt / 1000)}:R>\nWinners: ${winners}`).setFooter({ text: `By ${interaction.user.tag}` }).setTimestamp()] }, { fetchReply: true });
+      const msg = await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('Giveaway!').setDescription(`**${prize}**\nReact with 🎉 to enter!\nEnds: <t:${Math.floor(endAt / 1000)}:R>\nWinners: ${winners}`).setFooter({ text: `By ${interaction.user.tag}` }).setTimestamp()] }, { fetchReply: true });
       await msg.react('🎉');
       setTimeout(async () => {
         try {
@@ -705,54 +627,14 @@ const commands = [
           const pool = reacted.map(u => u);
           const winnerCount = Math.min(winners, pool.length);
           const chosen = pool.sort(() => 0.5 - Math.random()).slice(0, winnerCount);
-          await interaction.followUp({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('🎉 Giveaway Ended!').setDescription(`**${prize}**\n${chosen.length ? chosen.map(u => `${u}`).join(', ') : 'No entries!'}`).setTimestamp()] });
+          await interaction.followUp({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('Giveaway Ended!').setDescription(`**${prize}**\n${chosen.length ? chosen.map(u => `${u}`).join(', ') : 'No entries!'}`).setTimestamp()] });
         } catch { await interaction.followUp('Giveaway ended but could not fetch reactions.').catch(() => {}); }
       }, minutes * 60000);
     }
   },
   // ═══════════════════════════════════════════════════════════════
-  // MODERATION COMMANDS
+  // MODERATION (unique to src)
   // ═══════════════════════════════════════════════════════════════
-  {
-    data: new SlashCommandBuilder().setName('kick').setDescription('Kick a member')
-      .addUserOption(o => o.setName('target').setDescription('Member to kick').setRequired(true))
-      .addStringOption(o => o.setName('reason').setDescription('Reason'))
-      .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers),
-    async execute(interaction) {
-      const target = interaction.options.getUser('target');
-      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-      if (!member) return interaction.reply({ content: 'User not found.', ephemeral: true });
-      if (!member.kickable) return interaction.reply({ content: 'Cannot kick this user.', ephemeral: true });
-      const reason = interaction.options.getString('reason') || 'No reason';
-      await member.kick(reason);
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setTitle('Member Kicked').addFields({ name: 'User', value: `${target.tag}`, inline: true }, { name: 'Reason', value: reason, inline: true }).setTimestamp()] });
-    }
-  },
-  {
-    data: new SlashCommandBuilder().setName('ban').setDescription('Ban a member')
-      .addUserOption(o => o.setName('target').setDescription('Member to ban').setRequired(true))
-      .addStringOption(o => o.setName('reason').setDescription('Reason'))
-      .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
-    async execute(interaction) {
-      const target = interaction.options.getUser('target');
-      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-      if (!member) return interaction.reply({ content: 'User not found.', ephemeral: true });
-      if (!member.bannable) return interaction.reply({ content: 'Cannot ban this user.', ephemeral: true });
-      const reason = interaction.options.getString('reason') || 'No reason';
-      await member.ban({ reason });
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xED4245).setTitle('Member Banned').addFields({ name: 'User', value: `${target.tag}`, inline: true }, { name: 'Reason', value: reason, inline: true }).setTimestamp()] });
-    }
-  },
-  {
-    data: new SlashCommandBuilder().setName('unban').setDescription('Unban a user by ID')
-      .addStringOption(o => o.setName('userid').setDescription('User ID to unban').setRequired(true))
-      .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
-    async execute(interaction) {
-      const userId = interaction.options.getString('userid');
-      try { await interaction.guild.members.unban(userId); await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`User <@${userId}> unbanned!`).setTimestamp()] }); }
-      catch { await interaction.reply({ content: 'Could not unban that user.', ephemeral: true }); }
-    }
-  },
   {
     data: new SlashCommandBuilder().setName('timeout').setDescription('Timeout a member')
       .addUserOption(o => o.setName('target').setDescription('Member').setRequired(true))
@@ -767,7 +649,7 @@ const commands = [
       const minutes = interaction.options.getInteger('minutes');
       const reason = interaction.options.getString('reason') || 'No reason';
       await member.timeout(minutes * 60000, reason);
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setTitle('Member Timed Out').addFields({ name: 'User', value: `${target.tag}`, inline: true }, { name: 'Duration', value: `${minutes}m`, inline: true }).setTimestamp()] });
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setTitle('Member Timed Out').addFields({ name: 'User', value: `${target.tag}`, inline: true }, { name: 'Duration', value: `${minutes}m`, inline: true }, { name: 'Reason', value: reason, inline: true }).setTimestamp()] });
     }
   },
   {
@@ -782,142 +664,389 @@ const commands = [
       await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`Timeout removed from ${target}`).setTimestamp()] });
     }
   },
+  // ═══════════════════════════════════════════════════════════════
+  // SERVER PROTECTION COMMANDS
+  // ═══════════════════════════════════════════════════════════════
   {
-    data: new SlashCommandBuilder().setName('purge').setDescription('Delete messages')
-      .addIntegerOption(o => o.setName('amount').setDescription('Number of messages').setRequired(true).setMinValue(1).setMaxValue(100))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    data: new SlashCommandBuilder().setName('setup-antiraid').setDescription('Configure anti-raid protection')
+      .addIntegerOption(o => o.setName('threshold').setDescription('Joins before trigger (default 5)').setMinValue(2).setMaxValue(50))
+      .addIntegerOption(o => o.setName('window').setDescription('Time window in seconds (default 30)').setMinValue(10).setMaxValue(120))
+      .addStringOption(o => o.setName('action').setDescription('Action against raiders')
+        .addChoices({ name: 'Kick', value: 'kick' }, { name: 'Ban', value: 'ban' }, { name: 'Timeout', value: 'timeout' }, { name: 'Lockdown Server', value: 'lockdown' }))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
-      const amount = interaction.options.getInteger('amount');
-      await interaction.deferReply({ ephemeral: true });
-      const deleted = await interaction.channel.bulkDelete(amount, true);
-      await interaction.editReply(`Deleted ${deleted.size} messages.`);
+      const threshold = interaction.options.getInteger('threshold') || 5;
+      const window = interaction.options.getInteger('window') || 30;
+      const action = interaction.options.getString('action') || 'kick';
+      db.prepare("UPDATE guilds SET anti_raid_enabled = 1, raid_threshold = ?, raid_window = ?, raid_action = ?, updated_at = datetime('now') WHERE guild_id = ?")
+        .run(threshold, window, action, interaction.guild.id);
+      const embed = new EmbedBuilder().setColor(0x57F287).setTitle('Anti-Raid Enabled')
+        .setDescription('Protection against mass joins activated')
+        .addFields(
+          { name: 'Threshold', value: `${threshold} joins`, inline: true },
+          { name: 'Window', value: `${window}s`, inline: true },
+          { name: 'Action', value: action, inline: true }
+        ).setTimestamp();
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('slowmode').setDescription('Set slowmode')
-      .addIntegerOption(o => o.setName('seconds').setDescription('Duration (0 to disable)').setRequired(true).setMinValue(0).setMaxValue(21600))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    data: new SlashCommandBuilder().setName('disable-antiraid').setDescription('Disable anti-raid protection')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
-      const seconds = interaction.options.getInteger('seconds');
-      await interaction.channel.setRateLimitPerUser(seconds);
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFEE75C).setDescription(seconds > 0 ? `Slowmode set to **${seconds}s**` : 'Slowmode disabled').setTimestamp()] });
+      db.prepare("UPDATE guilds SET anti_raid_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Anti-raid protection disabled.', ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('lock').setDescription('Lock a channel')
-      .addChannelOption(o => o.setName('channel').setDescription('Channel').addChannelTypes(ChannelType.GuildText))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    data: new SlashCommandBuilder().setName('setup-antispam').setDescription('Configure anti-spam protection')
+      .addIntegerOption(o => o.setName('threshold').setDescription('Messages before action (default 5)').setMinValue(3).setMaxValue(20))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
-      const channel = interaction.options.getChannel('channel') || interaction.channel;
-      await channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: false });
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`🔒 ${channel} locked`).setTimestamp()] });
+      const threshold = interaction.options.getInteger('threshold') || 5;
+      db.prepare("UPDATE guilds SET anti_spam_enabled = 1, spam_threshold = ?, updated_at = datetime('now') WHERE guild_id = ?")
+        .run(threshold, interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Anti-Spam Enabled')
+        .setDescription(`Members sending ${threshold}+ similar messages in 5s will be timed out`)
+        .setTimestamp()], ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('unlock').setDescription('Unlock a channel')
-      .addChannelOption(o => o.setName('channel').setDescription('Channel').addChannelTypes(ChannelType.GuildText))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    data: new SlashCommandBuilder().setName('disable-antispam').setDescription('Disable anti-spam')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     async execute(interaction) {
-      const channel = interaction.options.getChannel('channel') || interaction.channel;
-      await channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: true });
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`🔓 ${channel} unlocked`).setTimestamp()] });
+      db.prepare("UPDATE guilds SET anti_spam_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Anti-spam disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-badwords').setDescription('Configure bad words filter')
+      .addStringOption(o => o.setName('words').setDescription('Comma-separated bad words').setRequired(true))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      const words = interaction.options.getString('words');
+      db.prepare("UPDATE guilds SET anti_badwords_enabled = 1, bad_words = ?, updated_at = datetime('now') WHERE guild_id = ?")
+        .run(words.toLowerCase(), interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Bad Words Filter Enabled')
+        .setDescription(`Filtering ${words.split(',').length} words/phrases`)
+        .setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('disable-badwords').setDescription('Disable bad words filter')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_badwords_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Bad words filter disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-caps').setDescription('Configure caps filter')
+      .addIntegerOption(o => o.setName('threshold').setDescription('Caps percentage (default 70)').setMinValue(50).setMaxValue(95))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      const threshold = interaction.options.getInteger('threshold') || 70;
+      db.prepare("UPDATE guilds SET anti_caps_enabled = 1, caps_threshold = ?, updated_at = datetime('now') WHERE guild_id = ?")
+        .run(threshold, interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Caps Filter Enabled')
+        .setDescription(`Messages with ${threshold}%+ caps will be deleted`)
+        .setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('disable-caps').setDescription('Disable caps filter')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_caps_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Caps filter disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-linkfilter').setDescription('Configure link filter')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_links_enabled = 1, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Link Filter Enabled')
+        .setDescription('Unauthorized links will be deleted. Staff with Manage Messages permission are exempt.')
+        .setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('disable-linkfilter').setDescription('Disable link filter')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_links_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Link filter disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-antinuke').setDescription('Configure anti-nuke protection (auto-lockdown on mass deletes)')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_nuke_enabled = 1, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Anti-Nuke Enabled')
+        .setDescription('Server will auto-lockdown if 3+ channels or roles are deleted within 10 seconds')
+        .setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('disable-antinuke').setDescription('Disable anti-nuke')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_nuke_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Anti-nuke disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-mention-limit').setDescription('Limit mass mentions')
+      .addIntegerOption(o => o.setName('threshold').setDescription('Max mentions allowed (default 5)').setMinValue(1).setMaxValue(20))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      const threshold = interaction.options.getInteger('threshold') || 5;
+      db.prepare("UPDATE guilds SET anti_mass_mention_enabled = 1, mass_mention_threshold = ?, updated_at = datetime('now') WHERE guild_id = ?")
+        .run(threshold, interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Mention Limit Set')
+        .setDescription(`Messages with ${threshold}+ mentions will be deleted`)
+        .setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('disable-mention-limit').setDescription('Disable mention limit')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET anti_mass_mention_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Mention limit disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-auditlog').setDescription('Enable audit log monitoring')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog))
+        return interaction.reply({ content: 'I need View Audit Log permission.', ephemeral: true });
+      db.prepare("UPDATE guilds SET audit_log_enabled = 1, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Audit Log Monitoring Enabled')
+        .setDescription('Suspicious activity will be logged to your log channel')
+        .setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('disable-auditlog').setDescription('Disable audit log monitoring')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare("UPDATE guilds SET audit_log_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ content: 'Audit log monitoring disabled.', ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('server-lockdown').setDescription('Emergency lockdown - disable all messages in the server')
+      .addStringOption(o => o.setName('reason').setDescription('Reason for lockdown'))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      const reason = interaction.options.getString('reason') || `Locked by ${interaction.user.tag}`;
+      for (const [, channel] of interaction.guild.channels.cache) {
+        if (channel.type === ChannelType.GuildText) {
+          try {
+            await channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: false, AddReactions: false }, reason);
+          } catch {}
+        }
+      }
+      db.prepare("UPDATE guilds SET lockdown_enabled = 1, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      const embed = new EmbedBuilder().setColor(0xED4245).setTitle('SERVER LOCKED DOWN')
+        .setDescription(reason).setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('server-unlock').setDescription('Unlock the entire server')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      for (const [, channel] of interaction.guild.channels.cache) {
+        if (channel.type === ChannelType.GuildText) {
+          try {
+            await channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: true, AddReactions: true }, `Unlocked by ${interaction.user.tag}`);
+          } catch {}
+        }
+      }
+      db.prepare("UPDATE guilds SET lockdown_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Server Unlocked').setDescription(`${interaction.user} unlocked the server`).setTimestamp()] });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('set-punish').setDescription('Set auto-punish type')
+      .addStringOption(o => o.setName('type').setDescription('Punishment type').setRequired(true)
+        .addChoices({ name: 'Timeout (1 hour)', value: 'timeout' }, { name: 'Kick', value: 'kick' }, { name: 'Ban', value: 'ban' }, { name: 'Mute Role', value: 'mute' }))
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      const type = interaction.options.getString('type');
+      db.prepare("UPDATE guilds SET auto_punish = ?, updated_at = datetime('now') WHERE guild_id = ?").run(type, interaction.guild.id);
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Auto-Punish Set')
+        .setDescription(`Auto-punishment type: **${type}**`).setTimestamp()], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('protection-status').setDescription('View all protection settings'),
+    async execute(interaction) {
+      const config = db.prepare('SELECT * FROM guilds WHERE guild_id = ?').get(interaction.guild.id) || {};
+      const bool = v => v ? '✅ Enabled' : '❌ Disabled';
+      const embed = new EmbedBuilder().setColor(0x5865F2).setTitle('Protection Status')
+        .addFields(
+          { name: 'Anti-Raid', value: bool(config.anti_raid_enabled), inline: true },
+          { name: '  Threshold', value: `${config.raid_threshold || 5} joins / ${config.raid_window || 30}s`, inline: true },
+          { name: '  Action', value: config.raid_action || 'kick', inline: true },
+          { name: 'Anti-Spam', value: bool(config.anti_spam_enabled), inline: true },
+          { name: '  Threshold', value: `${config.spam_threshold || 5} msgs`, inline: true },
+          { name: '\u200b', value: '\u200b', inline: true },
+          { name: 'Bad Words', value: bool(config.anti_badwords_enabled), inline: true },
+          { name: '  Words', value: config.bad_words ? `${config.bad_words.split(',').length} configured` : 'None', inline: true },
+          { name: '\u200b', value: '\u200b', inline: true },
+          { name: 'Caps Filter', value: bool(config.anti_caps_enabled), inline: true },
+          { name: '  Threshold', value: `${config.caps_threshold || 70}%`, inline: true },
+          { name: '\u200b', value: '\u200b', inline: true },
+          { name: 'Link Filter', value: bool(config.anti_links_enabled), inline: true },
+          { name: 'Anti-Nuke', value: bool(config.anti_nuke_enabled), inline: true },
+          { name: 'Mention Limit', value: bool(config.anti_mass_mention_enabled), inline: true },
+          { name: 'Audit Log', value: bool(config.audit_log_enabled), inline: true },
+          { name: 'Auto-Punish', value: config.auto_punish || 'timeout', inline: true },
+          { name: 'Lockdown', value: bool(config.lockdown_enabled), inline: true }
+        ).setTimestamp();
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+  },
+  {
+    data: new SlashCommandBuilder().setName('setup-all-protections').setDescription('Enable all protection features at once')
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    async execute(interaction) {
+      db.prepare(`UPDATE guilds SET
+        anti_raid_enabled = 1, anti_spam_enabled = 1, anti_badwords_enabled = 1,
+        anti_caps_enabled = 1, anti_links_enabled = 1, anti_nuke_enabled = 1,
+        anti_mass_mention_enabled = 1, audit_log_enabled = 1,
+        updated_at = datetime('now') WHERE guild_id = ?`).run(interaction.guild.id);
+      const embed = new EmbedBuilder().setColor(0x57F287).setTitle('ALL PROTECTIONS ENABLED')
+        .setDescription('The following protections are now active:')
+        .addFields(
+          { name: 'Anti-Raid', value: 'Mass join detection', inline: true },
+          { name: 'Anti-Spam', value: 'Spam message detection', inline: true },
+          { name: 'Bad Words', value: 'Profanity filter', inline: true },
+          { name: 'Caps Filter', value: 'Excessive caps filter', inline: true },
+          { name: 'Link Filter', value: 'Unauthorized link filter', inline: true },
+          { name: 'Anti-Nuke', value: 'Mass deletion protection', inline: true },
+          { name: 'Mention Limit', value: 'Mass mention protection', inline: true },
+          { name: 'Audit Log', value: 'Activity monitoring', inline: true }
+        )
+        .setFooter({ text: 'Configure individual settings with their respective commands' })
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   },
   // ═══════════════════════════════════════════════════════════════
-  // ROLE & UTILITY COMMANDS
+  // WHITELIST COMMANDS (Owner Only)
   // ═══════════════════════════════════════════════════════════════
   {
-    data: new SlashCommandBuilder().setName('nick').setDescription('Change member nickname')
-      .addUserOption(o => o.setName('target').setDescription('Member').setRequired(true))
-      .addStringOption(o => o.setName('nickname').setDescription('New nickname').setRequired(true).setMaxLength(32))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames),
+    data: new SlashCommandBuilder().setName('whitelist-add').setDescription('Add a server to the whitelist')
+      .addStringOption(o => o.setName('guild-id').setDescription('Server ID to whitelist').setRequired(true)),
     async execute(interaction) {
-      const target = interaction.options.getUser('target');
-      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-      if (!member) return interaction.reply({ content: 'User not found.', ephemeral: true });
-      if (!member.manageable) return interaction.reply({ content: 'Cannot change this nickname.', ephemeral: true });
-      await member.setNickname(interaction.options.getString('nickname'));
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`Nickname changed for ${target}`).setTimestamp()] });
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
+      const guildId = interaction.options.getString('guild-id');
+      const guild = interaction.client.guilds.cache.get(guildId);
+      if (!guild) return interaction.reply({ content: 'Bot is not in that server.', ephemeral: true });
+
+      const existing = db.prepare('SELECT * FROM whitelisted_servers WHERE guild_id = ?').get(guildId);
+      if (existing) return interaction.reply({ content: 'Server is already whitelisted.', ephemeral: true });
+
+      db.prepare('INSERT INTO whitelisted_servers (guild_id, guild_name, added_by, added_at, is_active) VALUES (?, ?, ?, datetime(\'now\'), 1)')
+        .run(guildId, guild.name, interaction.user.id);
+
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Server Whitelisted')
+        .setDescription(`**${guild.name}** has been added to the whitelist.`)
+        .addFields({ name: 'Server ID', value: guildId, inline: true }, { name: 'Members', value: `${guild.memberCount}`, inline: true })
+        .setTimestamp()], ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('role-add').setDescription('Add a role to a member')
-      .addUserOption(o => o.setName('target').setDescription('Member').setRequired(true))
-      .addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+    data: new SlashCommandBuilder().setName('whitelist-remove').setDescription('Remove a server from the whitelist')
+      .addStringOption(o => o.setName('guild-id').setDescription('Server ID to remove').setRequired(true)),
     async execute(interaction) {
-      const target = interaction.options.getUser('target');
-      const role = interaction.options.getRole('role');
-      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-      if (!member) return interaction.reply({ content: 'User not found.', ephemeral: true });
-      if (role.position >= interaction.guild.members.me.roles.highest.position) return interaction.reply({ content: 'Role too high.', ephemeral: true });
-      await member.roles.add(role);
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setDescription(`Added ${role} to ${target}`).setTimestamp()] });
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
+      const guildId = interaction.options.getString('guild-id');
+      const existing = db.prepare('SELECT * FROM whitelisted_servers WHERE guild_id = ?').get(guildId);
+      if (!existing) return interaction.reply({ content: 'Server is not whitelisted.', ephemeral: true });
+
+      db.prepare('DELETE FROM whitelisted_servers WHERE guild_id = ?').run(guildId);
+
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xED4245).setTitle('Server Removed')
+        .setDescription(`**${existing.guild_name}** has been removed from the whitelist.`)
+        .setTimestamp()], ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('role-remove').setDescription('Remove a role from a member')
-      .addUserOption(o => o.setName('target').setDescription('Member').setRequired(true))
-      .addRoleOption(o => o.setName('role').setDescription('Role').setRequired(true))
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+    data: new SlashCommandBuilder().setName('whitelist-list').setDescription('View all whitelisted servers'),
     async execute(interaction) {
-      const target = interaction.options.getUser('target');
-      const role = interaction.options.getRole('role');
-      const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-      if (!member) return interaction.reply({ content: 'User not found.', ephemeral: true });
-      await member.roles.remove(role);
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xED4245).setDescription(`Removed ${role} from ${target}`).setTimestamp()] });
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
+      const servers = db.prepare('SELECT * FROM whitelisted_servers ORDER BY added_at DESC').all();
+      if (!servers.length) return interaction.reply({ content: 'No servers whitelisted.', ephemeral: true });
+
+      const desc = servers.map((s, i) => {
+        const online = interaction.client.guilds.cache.has(s.guild_id);
+        return `\`${i + 1}.\` **${s.guild_name}** (${s.guild_id}) — ${online ? '🟢 Online' : '🔴 Offline'} — ${s.is_active ? '✅ Active' : '❌ Disabled'}`;
+      }).join('\n');
+
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle('Whitelisted Servers')
+        .setDescription(desc).setTimestamp()], ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('avatar').setDescription('Get user avatar')
-      .addUserOption(o => o.setName('target').setDescription('User')),
+    data: new SlashCommandBuilder().setName('whitelist-toggle').setDescription('Toggle a whitelisted server on/off')
+      .addStringOption(o => o.setName('guild-id').setDescription('Server ID').setRequired(true)),
     async execute(interaction) {
-      const user = interaction.options.getUser('target') || interaction.user;
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle(`${user.tag}'s Avatar`).setImage(user.displayAvatarURL({ dynamic: true, size: 1024 })).setTimestamp()] });
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
+      const guildId = interaction.options.getString('guild-id');
+      const existing = db.prepare('SELECT * FROM whitelisted_servers WHERE guild_id = ?').get(guildId);
+      if (!existing) return interaction.reply({ content: 'Server is not whitelisted.', ephemeral: true });
+
+      const newStatus = existing.is_active ? 0 : 1;
+      db.prepare('UPDATE whitelisted_servers SET is_active = ? WHERE guild_id = ?').run(newStatus, guildId);
+
+      await interaction.reply({ embeds: [new EmbedBuilder().setColor(newStatus ? 0x57F287 : 0xFEE75C)
+        .setTitle('Whitelist Updated')
+        .setDescription(`**${existing.guild_name}** is now ${newStatus ? 'enabled' : 'disabled'}.`)
+        .setTimestamp()], ephemeral: true });
     }
   },
   {
-    data: new SlashCommandBuilder().setName('banner').setDescription('Get user banner')
-      .addUserOption(o => o.setName('target').setDescription('User')),
+    data: new SlashCommandBuilder().setName('whitelist-check').setDescription('Check if a server is whitelisted')
+      .addStringOption(o => o.setName('guild-id').setDescription('Server ID to check').setRequired(true)),
     async execute(interaction) {
-      const user = interaction.options.getUser('target') || interaction.user;
-      const fetched = await interaction.client.users.fetch(user.id, { force: true });
-      const banner = fetched.bannerURL({ dynamic: true, size: 1024 });
-      if (!banner) return interaction.reply({ content: `${user.tag} has no banner.`, ephemeral: true });
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x5865F2).setTitle(`${user.tag}'s Banner`).setImage(banner).setTimestamp()] });
-    }
-  },
-  // ═══════════════════════════════════════════════════════════════
-  // LEVELING COMMANDS
-  // ═══════════════════════════════════════════════════════════════
-  {
-    data: new SlashCommandBuilder().setName('level').setDescription('Check your level')
-      .addUserOption(o => o.setName('target').setDescription('User')),
-    async execute(interaction) {
-      const user = interaction.options.getUser('target') || interaction.user;
-      const row = db.prepare('SELECT * FROM user_levels WHERE guild_id = ? AND user_id = ?').get(interaction.guild.id, user.id);
-      if (!row) return interaction.reply({ content: 'No leveling data found for this user.', ephemeral: true });
-      const xpNeeded = Math.floor(100 * Math.pow(1.5, row.level));
-      const bar = '█'.repeat(Math.min(Math.floor((row.xp / xpNeeded) * 10), 10)) + '░'.repeat(Math.max(10 - Math.floor((row.xp / xpNeeded) * 10), 0));
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle(`${user.tag}'s Level`).setThumbnail(user.displayAvatarURL({ dynamic: true })).addFields({ name: 'Level', value: `${row.level}`, inline: true }, { name: 'XP', value: `${row.xp}/${xpNeeded}`, inline: true }, { name: 'Messages', value: `${row.messages}`, inline: true }, { name: 'Progress', value: `\`${bar}\`` }).setTimestamp()] });
-    }
-  },
-  {
-    data: new SlashCommandBuilder().setName('leaderboard').setDescription('Server XP leaderboard'),
-    async execute(interaction) {
-      const rows = db.prepare('SELECT * FROM user_levels WHERE guild_id = ? ORDER BY xp DESC LIMIT 10').all(interaction.guild.id);
-      if (!rows.length) return interaction.reply({ content: 'No leveling data yet.', ephemeral: true });
-      const medals = ['🥇','🥈','🥉'];
-      const desc = rows.map((r, i) => `${medals[i] || `**${i+1}.**`} <@${r.user_id}> — Level **${r.level}** (${r.xp} XP)`).join('\n');
-      await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('Leaderboard').setDescription(desc).setTimestamp()] });
+      if (interaction.user.id !== process.env.BOT_OWNER_ID) {
+        return interaction.reply({ content: 'Only the bot owner can use this command.', ephemeral: true });
+      }
+      const guildId = interaction.options.getString('guild-id');
+      const existing = db.prepare('SELECT * FROM whitelisted_servers WHERE guild_id = ?').get(guildId);
+      const guild = interaction.client.guilds.cache.get(guildId);
+
+      if (existing) {
+        await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Whitelist Check')
+          .setDescription(`**${existing.guild_name}** is whitelisted.`)
+          .addFields(
+            { name: 'Status', value: existing.is_active ? '✅ Active' : '❌ Disabled', inline: true },
+            { name: 'Bot Online', value: guild ? '✅ Yes' : '❌ No', inline: true },
+            { name: 'Added', value: `<t:${Math.floor(new Date(existing.added_at).getTime() / 1000)}:R>`, inline: true }
+          ).setTimestamp()], ephemeral: true });
+      } else {
+        await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xED4245).setTitle('Not Whitelisted')
+          .setDescription(`Server \`${guildId}\` is not in the whitelist.`)
+          .setTimestamp()], ephemeral: true });
+      }
     }
   }
 ];
-
-function formatUptime(ms) {
-  const s = Math.floor((ms / 1000) % 60), m = Math.floor((ms / 1000 / 60) % 60), h = Math.floor((ms / 1000 / 60 / 60) % 24), d = Math.floor(ms / 1000 / 60 / 60 / 24);
-  return `${d}d ${h}h ${m}m ${s}s`;
-}
 
 module.exports = commands;

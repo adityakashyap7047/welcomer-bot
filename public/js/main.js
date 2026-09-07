@@ -117,9 +117,10 @@ setInterval(fetchStats, 10000);
 document.querySelectorAll('.toggle-switch').forEach(toggle => {
   toggle.addEventListener('click', () => {
     toggle.classList.toggle('active');
-    const input = toggle.querySelector('input') || toggle.nextElementSibling;
-    if (input && input.type === 'hidden') {
-      input.value = toggle.classList.contains('active') ? '1' : '0';
+    // Find the hidden input next to this toggle
+    const hiddenInput = toggle.parentElement.querySelector('input[type="hidden"]');
+    if (hiddenInput) {
+      hiddenInput.value = toggle.classList.contains('active') ? '1' : '0';
     }
   });
 });
@@ -131,6 +132,12 @@ document.querySelectorAll('.settings-form').forEach(form => {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     const guildId = form.dataset.guildId;
+
+    // Show saving state
+    const btn = form.querySelector('.btn-save');
+    const originalText = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
 
     try {
       const res = await fetch(`/api/guild/${guildId}/config`, {
@@ -146,6 +153,9 @@ document.querySelectorAll('.settings-form').forEach(form => {
       }
     } catch (err) {
       showToast('Network error.', 'error');
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
     }
   });
 });

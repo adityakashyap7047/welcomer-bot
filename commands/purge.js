@@ -1,23 +1,17 @@
-const { EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-  name: 'purge',
-  description: 'Delete multiple messages',
-  async execute(message, args, client) {
-    if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages))
-      return message.reply({ content: 'You need ManageMessages permission.' });
-
-    const amount = parseInt(args[0]);
-    if (!amount || amount < 1 || amount > 100)
-      return message.reply({ content: 'Please provide a number between 1 and 100.' });
-
-    const deleted = await message.channel.bulkDelete(amount, true);
-    const embed = new EmbedBuilder()
-      .setColor('#57F287')
-      .setTitle('Messages Purged')
-      .setDescription(`Deleted **${deleted.size}** messages.`)
-      .setTimestamp();
-    const reply = await message.reply({ embeds: [embed] });
-    setTimeout(() => reply.delete().catch(() => {}), 3000);
+  data: new SlashCommandBuilder().setName('purge').setDescription('Bulk delete messages from a channel')
+    .addIntegerOption(o => o.setName('amount').setDescription('Number of messages to delete (1-100)').setRequired(true).setMinValue(1).setMaxValue(100))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+  async execute(interaction) {
+    const amount = interaction.options.getInteger('amount');
+    await interaction.deferReply({ ephemeral: true });
+    try {
+      const deleted = await interaction.channel.bulkDelete(amount, true);
+      await interaction.editReply(`Deleted **${deleted.size}** messages.`);
+    } catch {
+      await interaction.editReply('Failed to delete messages. They may be older than 14 days.');
+    }
   }
 };
