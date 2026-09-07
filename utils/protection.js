@@ -226,10 +226,13 @@ class ProtectionSystem {
     const config = db.prepare('SELECT * FROM guilds WHERE guild_id = ?').get(guild.id);
     if (!config?.audit_log_enabled) return;
 
+    if (!this.lastAuditIds) this.lastAuditIds = new Map();
+
     try {
       const memberLogs = await guild.fetchAuditLogs({ limit: 5, type: 1 });
       const memberEntry = memberLogs.entries.first();
-      if (memberEntry) {
+      if (memberEntry && memberEntry.id !== this.lastAuditIds.get(`kick_${guild.id}`)) {
+        this.lastAuditIds.set(`kick_${guild.id}`, memberEntry.id);
         const log = new EmbedBuilder()
           .setColor(0x5865F2)
           .setTitle('Member Kicked')
@@ -241,7 +244,8 @@ class ProtectionSystem {
 
       const banLogs = await guild.fetchAuditLogs({ limit: 5, type: 2 });
       const banEntry = banLogs.entries.first();
-      if (banEntry) {
+      if (banEntry && banEntry.id !== this.lastAuditIds.get(`ban_${guild.id}`)) {
+        this.lastAuditIds.set(`ban_${guild.id}`, banEntry.id);
         const log = new EmbedBuilder()
           .setColor(0xED4245)
           .setTitle('Member Banned')
@@ -251,6 +255,34 @@ class ProtectionSystem {
         this.logToGuild(guild, log);
       }
     } catch {}
+  }
+
+  async lockdownServer(guild, reason) {
+    const locked = [];
+    for (const [, channel] of guild.channels.cache) {
+      if (channel.type === 0) {
+        try {
+          await channel.permissionOverwrites.edit(guild.id, { SendMessages: false, AddReactions: false }, reason);
+          locked.push(channel.id);
+        } catch {}
+      }
+    }
+    db.prepare("UPDATE guilds SET lockdown_enabled = 1, updated_at = datetime('now') WHERE guild_id = ?").run(guild.id);
+    return locked;
+  }
+
+  async unlockServer(guild, user) {
+    const unlocked = [];
+    for (const [, channel] of guild.channels.cache) {
+      if (channel.type === 0) {
+        try {
+          await channel.permissionOverwrites.edit(guild.id, { SendMessages: true, AddReactions: true }, `Unlocked by ${user.tag || user.username}`);
+          unlocked.push(channel.id);
+        } catch {}
+      }
+    }
+    db.prepare("UPDATE guilds SET lockdown_enabled = 0, updated_at = datetime('now') WHERE guild_id = ?").run(guild.id);
+    return unlocked;
   }
 }
 

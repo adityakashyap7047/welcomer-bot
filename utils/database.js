@@ -49,7 +49,7 @@ async function initDatabase() {
 
   addColumn('guilds', 'welcome_title', 'TEXT', "'Welcome!'");
   addColumn('guilds', 'welcome_footer', 'TEXT', "'Thanks for joining!'");
-  addColumn('guilds', 'welcome_image', 'INTEGER', 0);
+  addColumn('guilds', 'welcome_image', 'TEXT', "''");
 
   addColumn('guilds', 'anti_raid_enabled', 'INTEGER', 0);
   addColumn('guilds', 'raid_threshold', 'INTEGER', 5);

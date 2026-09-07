@@ -100,9 +100,6 @@ client.once(Events.ClientReady, async (c) => {
 
   if (ALLOWED_GUILD_IDS.length > 0) {
     console.log(`\x1b[33m!\x1b[0m Private mode: ${ALLOWED_GUILD_IDS.length} allowed guild(s)`);
-  }
-
-  if (ALLOWED_GUILD_IDS.length > 0) {
     for (const [, guild] of client.guilds.cache) {
       if (!isGuildAllowed(guild.id)) {
         console.log(`\x1b[31m✕\x1b[0m Leaving unauthorized guild: ${guild.name} (${guild.id})`);
@@ -405,11 +402,9 @@ if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
     clientID: process.env.DISCORD_CLIENT_ID,
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
     callbackURL: process.env.DISCORD_CALLBACK_URL || `http://localhost:${PORT}/auth/callback`,
-    scope: ['identify', 'guilds', 'guilds.join'],
+    scope: ['identify', 'guilds'],
     passReqToCallback: true
   }, (req, accessToken, refreshToken, profile, done) => {
-    profile.accessToken = accessToken;
-    profile.refreshToken = refreshToken;
     if (req.query && req.query.state) {
       req.query._verificationState = req.query.state;
     }
@@ -423,10 +418,6 @@ app.use((req, res, next) => { res.locals.user = req.user || null; next(); });
 
 app.get('/auth/login', passport.authenticate('discord'));
 app.get('/auth/callback', passport.authenticate('discord', { failureRedirect: '/' }), async (req, res) => {
-  if (req.user && req.user.accessToken) {
-    db.prepare("INSERT OR REPLACE INTO authorized_users (user_id, username, access_token, refresh_token, authorized_at) VALUES (?, ?, ?, ?, datetime('now'))")
-      .run(req.user.id, req.user.username, req.user.accessToken, req.user.refreshToken || '');
-  }
 
   const state = req.query.state;
   if (state) {
@@ -466,7 +457,7 @@ app.get('/verify/:guildId/:roleId', (req, res) => {
   const { guildId, roleId } = req.params;
   const state = Buffer.from(JSON.stringify({ guildId, roleId })).toString('base64');
   passport.authenticate('discord', {
-    scope: ['identify', 'guilds', 'guilds.join'],
+    scope: ['identify', 'guilds'],
     state
   })(req, res);
 });

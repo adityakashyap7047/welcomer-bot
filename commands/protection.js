@@ -5,12 +5,27 @@ function getConfig(guildId) {
   return db.prepare('SELECT * FROM guilds WHERE guild_id = ?').get(guildId) || {};
 }
 
+const ALLOWED_COLUMNS = new Set([
+  'anti_raid_enabled', 'raid_threshold', 'raid_window', 'raid_action',
+  'anti_spam_enabled', 'spam_threshold',
+  'anti_badwords_enabled', 'bad_words',
+  'anti_caps_enabled', 'caps_threshold',
+  'anti_links_enabled',
+  'anti_nuke_enabled',
+  'anti_mass_mention_enabled', 'mass_mention_threshold',
+  'audit_log_enabled',
+  'auto_punish',
+  'lockdown_enabled',
+  'verification_enabled', 'verification_role', 'verification_channel'
+]);
+
 function setConfig(guildId, updates) {
   const existing = getConfig(guildId);
   if (!existing.guild_id) {
     db.prepare("INSERT OR IGNORE INTO guilds (guild_id, updated_at) VALUES (?, datetime('now'))").run(guildId);
   }
   for (const [key, val] of Object.entries(updates)) {
+    if (!ALLOWED_COLUMNS.has(key)) continue;
     db.prepare(`UPDATE guilds SET ${key} = ?, updated_at = datetime('now') WHERE guild_id = ?`).run(val, guildId);
   }
 }
@@ -253,19 +268,29 @@ const commands = [
   // ═══════════════════════════════════════════════════════════════
   {
     data: new SlashCommandBuilder().setName('lockdown').setDescription('Lockdown the server (disable messages in all channels)').setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    async execute(interaction, client) {
-      const ProtectionSystem = require('../utils/protection');
-      const prot = new ProtectionSystem(client);
-      await prot.lockdownServer(interaction.guild, `Lockdown by ${interaction.user.tag}`);
+    async execute(interaction) {
+      for (const [, channel] of interaction.guild.channels.cache) {
+        if (channel.type === ChannelType.GuildText) {
+          try {
+            await channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: false, AddReactions: false }, `Lockdown by ${interaction.user.tag}`);
+          } catch {}
+        }
+      }
+      setConfig(interaction.guild.id, { lockdown_enabled: 1 });
       await interaction.reply({ embeds: [new EmbedBuilder().setColor(0xED4245).setTitle('Server Locked Down').setDescription('All text channels have been locked.').setTimestamp()], ephemeral: true });
     }
   },
   {
     data: new SlashCommandBuilder().setName('unlock-server').setDescription('Unlock all locked channels').setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    async execute(interaction, client) {
-      const ProtectionSystem = require('../utils/protection');
-      const prot = new ProtectionSystem(client);
-      await prot.unlockServer(interaction.guild, interaction.user);
+    async execute(interaction) {
+      for (const [, channel] of interaction.guild.channels.cache) {
+        if (channel.type === ChannelType.GuildText) {
+          try {
+            await channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: true, AddReactions: true }, `Unlocked by ${interaction.user.tag}`);
+          } catch {}
+        }
+      }
+      setConfig(interaction.guild.id, { lockdown_enabled: 0 });
       await interaction.reply({ embeds: [new EmbedBuilder().setColor(0x57F287).setTitle('Server Unlocked').setDescription('All channels have been unlocked.').setTimestamp()], ephemeral: true });
     }
   }

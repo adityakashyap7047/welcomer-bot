@@ -22,7 +22,7 @@ function createWelcomeEmbed(member, guild, config) {
   const message = replaceVariables(config.welcome_message || 'Welcome to {server}, {user}! You are member #{count}!', member, guild);
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle(`Welcome to ${guild.name}!`)
+    .setTitle(config.welcome_title ? replaceVariables(config.welcome_title, member, guild) : `Welcome to ${guild.name}!`)
     .setDescription(message)
     .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
     .addFields(
@@ -30,7 +30,7 @@ function createWelcomeEmbed(member, guild, config) {
       { name: 'Member Count', value: `${guild.memberCount}`, inline: true },
       { name: 'ID', value: member.id, inline: true }
     )
-    .setFooter({ text: `${guild.name} • Welcome System` })
+    .setFooter({ text: config.welcome_footer ? replaceVariables(config.welcome_footer, member, guild) : `${guild.name} • Welcome System` })
     .setTimestamp();
 }
 
