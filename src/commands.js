@@ -554,7 +554,8 @@ const commands = [
       const footer = interaction.options.getString('footer');
       const embed = new EmbedBuilder().setColor(color).setTitle(title).setDescription(message).setTimestamp();
       if (footer) embed.setFooter({ text: footer });
-      await interaction.reply({ embeds: [embed] });
+      await interaction.channel.send({ embeds: [embed] });
+      await interaction.reply({ content: 'Embed sent!', ephemeral: true });
     }
   },
   {
